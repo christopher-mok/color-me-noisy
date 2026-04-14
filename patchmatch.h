@@ -11,7 +11,7 @@ struct Match{
 
 using NNF = std::vector<std::vector<Match>>;
 
-class patchmatch
+class Patchmatch
 {
 public:
     static NNF run_patchmatch(const Image& target,
@@ -28,9 +28,21 @@ private:
                               const Image& source,
                               NNF& nnf,
                               int patchRadius);
-    static void propogateForward();
-    static void propogateBackward();
-    static void randomSearch();
+    static void propogateForward(int x, int y,
+                                 const Image& target,
+                                 const Image& source,
+                                 int patchRadius,
+                                 int iterations);
+    static void propogateBackward(int x, int y,
+                                  const Image& target,
+                                  const Image& source,
+                                  int patchRadius,
+                                  int iterations);
+    static void randomSearch(int x, int y,
+                             const Image& target,
+                             const Image& source,
+                             NNF& nnf,
+                             int patchRadius);
 };
 
 #endif // PATCHMATCH_H

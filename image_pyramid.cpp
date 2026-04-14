@@ -1,6 +1,6 @@
 #include "image_pyramid.h"
 
-//run image pyramid
+//just a downsample
 std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filterStrength){
     std::vector<Image> pyramid; // initialize pyramid with image
     pyramid.push_back(image);
@@ -30,7 +30,7 @@ int ImagePyramid::num_levels(const Image& image, float f){
         levels++;
     }
 
-    int filterLevels = int fLevels = static_cast<int>(std::log(f) / std::log(1.0f / 0.85f)) + 1;
+    int filterLevels = static_cast<int>(std::log(f) / std::log(1.0f / 0.85f)) + 1;
     return std::max(1, std::min(levels, filterLevels));
 }
 
@@ -95,7 +95,7 @@ Image ImagePyramid::blur(const Image& image){
 
 
     // Loop over every image pixel
-    for (int r = 0; r < image.width; r++){
+    for (int r = 0; r < image.height; r++){
         for (int c = 0; c < image.width; c++){
             // initiate accumulation variable
             RGB newRGB;

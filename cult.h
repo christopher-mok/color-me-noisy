@@ -17,10 +17,12 @@ public:
 private:
     std::vector<Image> m_frames;
     std::vector<Image> m_outputFrames;
+    std::vector<Image> m_texPyramid;
 
     Image m_targetFrame;
     Image m_sourceTexture;
 
+    Image processFrame(const Image& frame, const Image& prevOutput);
     void initFrames(const QStringList &framePaths);
     void saveFrames(const QString &outputDir);
     

@@ -16,11 +16,13 @@ public:
     //Interpolates filter strength across levels
     static float filter_strength_at_level(float f, int level, int totalLevels);
 
+    static Image upsample(const Image& image);
+
 private:
     //Set pyramid level for coarse consistency
     static void set_level(std::vector<Image>& pyramid, int level, const Image& image);
 
-    static Image upsample(const Image& image);
+
     static Image blur(const Image& image);
     static float pixWeight(int xdiff, int ydiff, float sigma); // sigma = blur strength
     static Image downsample(const Image& image);

@@ -16,6 +16,7 @@ struct Image{
     int width;
     int height;
     bool isFrame;
+    int frameNumber;
 };
 
 

@@ -6,6 +6,8 @@
 #include <QStringList>
 
 #include "image_utils.h"
+#include "patchmatch.h"
+#include "image_pyramid.h"
 
 
 class Cult
@@ -25,7 +27,12 @@ private:
     Image processFrame(const Image& frame, const Image& prevOutput);
     void initFrames(const QStringList &framePaths);
     void saveFrames(const QString &outputDir);
+
+    Image deformImage(const Image& image);
+    Image patchmatch(const Image& target, const Image& source);
     
+    const int PATCH_RADIUS = 1;
+    const int PATCHMATCH_ITERATIONS = 1;
 };
 
 #endif // CULT_H

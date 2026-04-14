@@ -25,9 +25,9 @@ class ImageUtils
 public:
     static Image readImage(const QString& path, bool isFrame);
 
-    static void writeImage(Image image, const QString& path);
+    static void writeImage(Image& image, const QString& path);
 
-    static RGB rgbAt(const Image& img, int x, int y, int w, int h);
+    static RGB rgbAt(const Image& img, int x, int y);
 };
 
 #endif // IMAGE_UTILS_H

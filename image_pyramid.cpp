@@ -36,7 +36,7 @@ int ImagePyramid::num_levels(const Image& image, float f){
 
 //Interpolates filter strength across levels
 float ImagePyramid::filter_strength_at_level(float f, int level, int totalLevels){
-
+    return 0.0f;
 }
 
 //Set pyramid level for coarse consistency and upsampling
@@ -53,7 +53,7 @@ Image ImagePyramid::downsample(const Image& image){
 }
 
 Image ImagePyramid::upsample(const Image& image){
-    
+    return image;
 }
 
 float pixWeight(int xdiff, int ydiff, float sigma){
@@ -66,7 +66,7 @@ float pixWeight(int xdiff, int ydiff, float sigma){
 std::vector<float> makeKernel(int radius, float sigma){
     int rad = 3;
     int diam = rad * 2 + 1;
-    std::vector<int> mask(diam*diam);
+    std::vector<float> mask(diam*diam);
 
     for (int kx=0; kx < diam; kx++){
         for (int ky=0; ky < diam; ky++){
@@ -110,7 +110,7 @@ Image ImagePyramid::blur(const Image& image){
                 int imgY = std::clamp(r-radius+ky, 0, image.height-1);
                 int imgX = std::clamp(c-radius+kx, 0, image.width-1);
                 
-                RGB targRGB = Image::rgbAt(imgX, imgY);
+                RGB targRGB = ImageUtils::rgbAt(image, imgX, imgY);
 
                 // multiply weight and accumulate
                 float w = kern[ki];
@@ -120,7 +120,7 @@ Image ImagePyramid::blur(const Image& image){
             }
 
             // add to newPixels
-            int imgInd = r * image.width + c;
+            int imageInd = r * image.width + c;
             newPixels[imageInd] = newRGB;
 
         }
@@ -132,13 +132,12 @@ Image ImagePyramid::blur(const Image& image){
     
     
     
-
-
+    return newImage;
 }
 
 
 
 //Downsample respecting filter strength
 Image ImagePyramid::downsample_to_level(const Image& image, float f, int level){
-
+    return image;
 }

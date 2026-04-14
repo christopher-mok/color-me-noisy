@@ -47,8 +47,8 @@ void ImageUtils::writeImage(Image& img, const QString& path) {
     qimg.save(path);
 }
 
-RGB rgbAt(const Image& img, int x, int y, int w, int h){
-    int ind = w * h + x;
+RGB ImageUtils::rgbAt(const Image& img, int x, int y){
+    int ind = img.width * y + x;
     RGB rgbVal = img.pixels[ind];
     return rgbVal;
 }

@@ -52,7 +52,9 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
 
-        Image s_deformed = deformImage();
+        //Update this to be the correct texture
+        Image s_deformed = deformImage(m_sourceTexture);
+
         output_frame = patchmatch(m_texPyramid[level], s_deformed);
 
         if (level < framePyramid.size() - 1) {
@@ -61,6 +63,18 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     }
     return output_frame;
 
+}
+
+Image Cult::patchmatch(const Image& target, const Image& source){
+    Image output_image;
+
+    NNF nnf = Patchmatch::run_patchmatch(target, source, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
+
+    return output_image;
+}
+
+Image Cult::deformImage(const Image& image){
+    return image;
 }
 
 void Cult::initFrames(const QStringList &framePaths) {

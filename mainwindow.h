@@ -8,7 +8,7 @@
 #include <QDir>
 #include <QPixmap>
 
-
+#include "cult.h"
 
 class MainWindow : public QMainWindow
 {
@@ -28,6 +28,7 @@ private:
     QLabel *m_display;
     QTimer *m_timer;
     QStringList m_framePaths; // sorted list of image file paths
+    QString m_texturePath = "../color-me-noisy/textures/robot.jpeg"; //Path to image texture
     int m_currentFrame;
 };
 

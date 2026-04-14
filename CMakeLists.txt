@@ -48,6 +48,8 @@ else()
 endif()
 
 target_link_libraries(colormenoisy PRIVATE Qt${QT_VERSION_MAJOR}::Widgets)
+find_package(Eigen3 REQUIRED)
+ target_link_libraries(colormenoisy PRIVATE Qt${QT_VERSION_MAJOR}::Widgets Eigen3::Eigen)
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
 # If you are developing for iOS or macOS you should consider setting an

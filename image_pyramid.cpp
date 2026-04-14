@@ -6,7 +6,9 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
     pyramid.push_back(image);
 
     //Do we determine num levels in here or explicitly in cult?
-    int numLevels = num_levels(image, filterStrength);
+//    int numLevels = num_levels(image, filterStrength);
+
+    int numLevels = 5;
     
     for(int i = 0; i < numLevels; i++){
         //get filter strength at level by calling that func? then can pass a filter strenhgth
@@ -17,6 +19,37 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
 
     return pyramid;
 }
+
+Image ImagePyramid::downsample(const Image& image){
+//    Image blurred_image = blur(image);
+    Image blurred_image = image;
+
+    //basically blurred[::2, ::2], or take every other pixel
+    int w = image.width / 2;
+    int h = image.height / 2;
+
+    Image out;
+    out.width = w;
+    out.height = h;
+
+    out.pixels.resize(w * h);
+
+    for (int r = 0; r < h; r++) {
+        for (int c = 0; c < w; c++) {
+            out.pixels[r * w + c] = blurred_image.pixels[(r*2) * image.width + (c*2)];
+        }
+    }
+
+    //maybe also take in a filter strength
+    return out;
+}
+
+Image ImagePyramid::upsample(const Image& image){
+    return image;
+}
+
+
+
 
 //How many levels to the pyramid based on filter strength and image size
 int ImagePyramid::num_levels(const Image& image, float f){
@@ -44,17 +77,6 @@ void ImagePyramid::set_level(std::vector<Image>& pyramid, int level, const Image
     pyramid[level] = image;
 }
 
-Image ImagePyramid::downsample(const Image& image){
-    // TODO:
-    //Image blurred_image == blur(image)
-    //return blurred[::2, ::2] (every other pixel basically, resulting image size will be /2)
-    //maybe also take in a filter strength
-    return image;
-}
-
-Image ImagePyramid::upsample(const Image& image){
-    return image;
-}
 
 float pixWeight(int xdiff, int ydiff, float sigma){
     float x = float(xdiff);

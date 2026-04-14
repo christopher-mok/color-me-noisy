@@ -2,8 +2,8 @@
 #define CULT_H
 
 #include <iostream>
-#include <stdlib.h>
 #include <QStringList>
+#include <Eigen/Dense>
 
 #include "image_utils.h"
 #include "patchmatch.h"

@@ -1,0 +1,9 @@
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/colormenoisy.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/edit_cache.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/rebuild_cache.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/list_install_components.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/install.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/install/local.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/install/strip.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/colormenoisy_autogen_timestamp_deps.dir
+/Users/christophermok/Desktop/cs2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_for_macOS-Release/CMakeFiles/colormenoisy_autogen.dir

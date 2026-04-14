@@ -7,13 +7,26 @@
 class ImagePyramid
 {
 public:
-    ImagePyramid();
-    std::vector<Image> make_gaussian_pyramid(Image im);
+    //run image pyramid
+    static std::vector<Image> make_gaussian_pyramid(Image image, float filterStrength, int startLevel);
+
+    //How many levels to the pyramid based on filter strength and image size
+    static int num_levels(const Image& image, float f);
+
+    //Interpolates filter strength across levels
+    static float filter_strength_at_level(float f, int level, int totalLevels);
 
 private:
-    Image upsample(const Image img);
-    RGB blur(const Image& img, int x, int y);
-    Image downsample(const Image img);
+    //Set pyramid level for coarse consistency
+    static void set_level(std::vector<Image>& pyramid, int level, const Image& image);
+
+    static Image upsample(const Image& image);
+    static RGB blur(const Image& image, int x, int y);
+    static Image downsample(const Image& image);
+
+    //Downsample respecting filter strength
+    static Image downsample_to_level(const Image& image, float f, int level);
+
 };
 
 #endif // IMAGE_PYRAMID_H

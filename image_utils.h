@@ -1,10 +1,25 @@
 #ifndef IMAGE_UTILS_H
 #define IMAGE_UTILS_H
 
-class image_utils
+#include <QImage>
+
+struct Image{
+    QImage pixels;
+    int width;
+    int height;
+    bool isFrame;
+};
+
+
+class ImageUtils
 {
 public:
-    image_utils();
+    ImageUtils();
+
+
+    Image readImage();
+
+    void writeImage();
 };
 
 #endif // IMAGE_UTILS_H

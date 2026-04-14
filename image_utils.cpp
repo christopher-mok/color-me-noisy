@@ -1,3 +1,13 @@
 #include "image_utils.h"
 
-image_utils::image_utils() {}
+ImageUtils::ImageUtils() {}
+
+Image ImageUtils::readImage(){
+    Image image = Image();
+
+    return image;
+}
+
+void ImageUtils::writeImage(){
+
+}

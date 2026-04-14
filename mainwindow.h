@@ -2,22 +2,34 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
+#include <QLabel>
+#include <QTimer>
+#include <QVBoxLayout>
+#include <QDir>
+#include <QPixmap>
 
-QT_BEGIN_NAMESPACE
-namespace Ui {
-class MainWindow;
-}
-QT_END_NAMESPACE
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
 
 public:
-    MainWindow(QWidget *parent = nullptr);
+    QString dirpath = "../../../frames";
+
+    explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();
 
 private:
-    Ui::MainWindow *ui;
+    void advanceFrame();
+
+    void loadFrames(const QString &dirPath);
+
+    QLabel *m_display;
+    QTimer *m_timer;
+    QStringList m_framePaths; // sorted list of image file paths
+    int m_currentFrame;
 };
+
 #endif // MAINWINDOW_H
+
+

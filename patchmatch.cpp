@@ -25,22 +25,22 @@ bool Patchmatch::isValidPatch(const Image& image, int x, int y, int patchRadius)
     return false;
 }
 
-void initializeNNF(const Image& target, const Image& source,
+void Patchmatch::initializeNNF(const Image& target, const Image& source,
                     NNF& nnf, int patchRadius){
 
 }
 
-void propogateForward(int x, int y, const Image& target, const Image& source,
+void Patchmatch::propogateForward(int x, int y, const Image& target, const Image& source,
                       int patchRadius, int iterations){
 
 }
 
-void propogateBackward(int x, int y, const Image& target,
+void Patchmatch::propogateBackward(int x, int y, const Image& target,
                        const Image& source, int patchRadius, int iterations){
 
 }
 
-void randomSearch(int x, int y, const Image& target, const Image& source,
+void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,
                   NNF& nnf, int patchRadius){
 
 }

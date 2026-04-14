@@ -1,0 +1,9 @@
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/colormenoisy.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/edit_cache.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/rebuild_cache.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/list_install_components.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/install.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/install/local.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/install/strip.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/colormenoisy_autogen_timestamp_deps.dir
+/Users/BCW1/Desktop/College/CS/CS2240/color-me-noisy/colormenoisy/build/build-colormenoisy-Qt_6_9_2_macos_b35ee1-Debug/CMakeFiles/colormenoisy_autogen.dir

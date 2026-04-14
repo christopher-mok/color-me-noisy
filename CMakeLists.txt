@@ -23,11 +23,6 @@ if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
     qt_add_executable(colormenoisy
         MANUAL_FINALIZATION
         ${PROJECT_SOURCES}
-        patchmatch.h patchmatch.cpp
-        image_pyramid.h image_pyramid.cpp
-        cult.h cult.cpp
-        image_utils.h image_utils.cpp
-
     )
 # Define target properties for Android with Qt 6 as:
 #    set_property(TARGET colormenoisy APPEND PROPERTY QT_ANDROID_PACKAGE_SOURCE_DIR

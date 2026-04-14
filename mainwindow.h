@@ -14,7 +14,7 @@ class MainWindow : public QMainWindow
     Q_OBJECT
 
 public:
-    QString dirpath = "../../../frames";
+    QString dirpath = "../color-me-noisy/frames";
 
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow();

@@ -1,10 +1,29 @@
 #ifndef CULT_H
 #define CULT_H
 
-class cult
+#include <iostream>
+#include <stdlib.h>
+#include <QStringList>
+
+#include "image_utils.h"
+
+
+class Cult
 {
 public:
-    cult();
+    Cult();
+    void run(const QStringList &framePaths, const QString &texturePath);
+
+private:
+    std::vector<Image> m_frames;
+    std::vector<Image> m_outputFrames;
+
+    Image m_targetFrame;
+    Image m_sourceTexture;
+
+    void initFrames(const QStringList &framePaths);
+    void saveFrames(const QString &outputDir);
+    
 };
 
 #endif // CULT_H

@@ -2,6 +2,7 @@
 #define IMAGE_UTILS_H
 
 #include <QImage>
+#include <vector>
 
 struct RGB{
     float r;
@@ -21,11 +22,11 @@ struct Image{
 class ImageUtils
 {
 public:
-    ImageUtils();
+    static Image readImage(const QString& path, bool isFrame);
 
-    Image readImage();
+    static void writeImage(Image image, const QString& path);
 
-    void writeImage();
+    static RGB rgbAt(const Image& img, int x, int y, int w, int h);
 };
 
 #endif // IMAGE_UTILS_H

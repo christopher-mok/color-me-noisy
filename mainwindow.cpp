@@ -17,6 +17,9 @@ MainWindow::MainWindow(QWidget *parent)
 
     loadFrames(dirpath);
 
+    Cult cult;
+    cult.run(m_framePaths);
+
     connect(m_timer, &QTimer::timeout, this, &MainWindow::advanceFrame);
     m_timer->start(41); // ~24 fps
 }

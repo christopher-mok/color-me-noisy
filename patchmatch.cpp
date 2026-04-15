@@ -10,6 +10,24 @@ NNF Patchmatch::run_patchmatch(const Image& target,
     NNF nnf;
     initializeNNF(target, source, nnf, patchRadius);
 
+    for(int i = 0; i < iterations; i++){
+        if(i%2==0){ //Forward propogation
+            for(int y = 0; y < target.height; y++){
+                for(int x = 0; x < target.width; x++){
+                    propogateForward(x, y, target, source, nnf, patchRadius);
+                    randomSearch(x, y, target, source, nnf, patchRadius);
+                }
+            }
+        }else{ //Backward propogation
+            for(int y = 0; y < target.height; y++){
+                for(int x = 0; x < target.width; x++){
+                    propogateBackward(x, y, target, source, nnf, patchRadius);
+                    randomSearch(x, y, target, source, nnf, patchRadius);
+                }
+            }
+        }
+    }
+
     return nnf;
 }
 
@@ -31,13 +49,12 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
 }
 
 void Patchmatch::propogateForward(int x, int y, const Image& target, const Image& source,
-                      int patchRadius, int iterations){
+                      NNF& nnf, int patchRadius){
 
 }
 
 void Patchmatch::propogateBackward(int x, int y, const Image& target,
-                       const Image& source, int patchRadius, int iterations){
-
+                       const Image& source, NNF& nnf, int patchRadius){
 }
 
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,

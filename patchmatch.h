@@ -31,13 +31,13 @@ private:
     static void propogateForward(int x, int y,
                                  const Image& target,
                                  const Image& source,
-                                 int patchRadius,
-                                 int iterations);
+                                 NNF& nnf,
+                                 int patchRadius);
     static void propogateBackward(int x, int y,
                                   const Image& target,
                                   const Image& source,
-                                  int patchRadius,
-                                  int iterations);
+                                  NNF& nnf,
+                                  int patchRadius);
     static void randomSearch(int x, int y,
                              const Image& target,
                              const Image& source,

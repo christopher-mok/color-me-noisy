@@ -22,6 +22,8 @@ MainWindow::MainWindow(QWidget *parent)
 
     connect(m_timer, &QTimer::timeout, this, &MainWindow::advanceFrame);
     m_timer->start(41); // ~24 fps
+
+
 }
 
 MainWindow::~MainWindow() {}

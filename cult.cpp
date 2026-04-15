@@ -41,6 +41,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
     saveFrames("../color-me-noisy/output_frames");
     std::cout<<"Good job team!" << std::endl;
+
 }
 
 Image Cult::processFrame(const Image& frame, const Image& prevOutput){

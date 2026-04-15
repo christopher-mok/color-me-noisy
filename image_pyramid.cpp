@@ -22,7 +22,7 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
 }
 
 Image ImagePyramid::downsample(const Image& image, float fStrength){
-//    Image blurred_image = blur(image);
+    //Image blurred_image = blur(image);
     Image blurred_image = image;
 
     //basically blurred[::2, ::2], or take every other pixel
@@ -82,24 +82,33 @@ void ImagePyramid::set_level(std::vector<Image>& pyramid, int level, const Image
 float pixWeight(int xdiff, int ydiff, float sigma){
     float x = float(xdiff);
     float y = float(ydiff);
-    float w = std::exp(-(x*x + y*y)) / (2*sigma*sigma);
+    float w = std::exp(-(x*x + y*y) / (2*sigma*sigma));
     return w;
 }
 
 std::vector<float> makeKernel(int radius, float sigma){
-    int rad = 3;
-    int diam = rad * 2 + 1;
+    int diam = radius * 2 + 1;
     std::vector<float> mask(diam*diam);
 
     for (int kx=0; kx < diam; kx++){
         for (int ky=0; ky < diam; ky++){
-            int xdiff = abs(rad - kx);
-            int ydiff = abs(rad - ky);
+            int xdiff = abs(radius - kx);
+            int ydiff = abs(radius - ky);
             float w = pixWeight(xdiff, ydiff, sigma);
             int ind = ky * diam + kx;
             mask[ind] = w;
         }
     }
+
+    // Normalize
+    float sum = 0.f;
+    for (float w : mask){
+        sum += w;
+    }
+    for (float& w : mask) {
+        w /= sum;
+    }
+
     return mask;
 
 }
@@ -110,12 +119,11 @@ Image ImagePyramid::blur(const Image& image){
     int diam = radius*2+1;
 
     // Initiate
-    std::vector<RGB> newPixels;
+    std::vector<RGB> newPixels(image.width * image.height);
     Image newImage;
 
     // make kernel
     std::vector<float> kern = makeKernel(radius, sigma);
-
 
     // Loop over every image pixel
     for (int r = 0; r < image.height; r++){
@@ -125,11 +133,12 @@ Image ImagePyramid::blur(const Image& image){
             newRGB.r = 0;
             newRGB.g = 0;
             newRGB.b = 0;
+            newRGB.a = 1.0f;
             // loop through each index in the kernel and get weight
             for (int ki=0; ki < diam*diam; ki ++){
                 // find corresponding coord in image
-                int kx = ki % radius;
-                int ky = std::floor(ki/radius);
+                int kx = ki % diam;
+                int ky = std::floor(ki/diam);
                 int imgY = std::clamp(r-radius+ky, 0, image.height-1);
                 int imgX = std::clamp(c-radius+kx, 0, image.width-1);
                 
@@ -137,9 +146,9 @@ Image ImagePyramid::blur(const Image& image){
 
                 // multiply weight and accumulate
                 float w = kern[ki];
-                newRGB.r += kern[ki] * targRGB.r;
-                newRGB.g += kern[ki] * targRGB.g;
-                newRGB.b += kern[ki] * targRGB.b;       
+                newRGB.r += w * targRGB.r;
+                newRGB.g += w * targRGB.g;
+                newRGB.b += w * targRGB.b;
             }
 
             // add to newPixels
@@ -147,13 +156,11 @@ Image ImagePyramid::blur(const Image& image){
             newPixels[imageInd] = newRGB;
 
         }
-        // make new image
-        newImage = image;
-        newImage.pixels = newPixels;
-        return newImage;
+
     }
-    
-    
-    
+    // make new image
+    newImage = image;
+    newImage.pixels = newPixels;
     return newImage;
+    
 }

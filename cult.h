@@ -11,6 +11,7 @@
 #include "patchmatch.h"
 #include "image_pyramid.h"
 
+using NNF = std::vector<std::vector<Match>>;
 
 class Cult
 {

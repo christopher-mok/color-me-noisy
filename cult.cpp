@@ -76,7 +76,7 @@ Image Cult::patchmatch(const Image& target, const Image& source){
     Image output_image;
 
     NNF nnf = Patchmatch::run_patchmatch(target, source, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
-
+    output_image = vote(target, source, nnf);
     return output_image;
 }
 

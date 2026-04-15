@@ -13,14 +13,15 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
     for(int i = 0; i < numLevels; i++){
         //get filter strength at level by calling that func? then can pass a filter strenhgth
         //into downsample, which then can pass it into blur
-        image = downsample(image);
+        float strength = filter_strength_at_level(filterStrength, i, numLevels);
+        image = downsample(image, strength);
         pyramid.push_back(image);
     }
 
     return pyramid;
 }
 
-Image ImagePyramid::downsample(const Image& image){
+Image ImagePyramid::downsample(const Image& image, float fStrength){
 //    Image blurred_image = blur(image);
     Image blurred_image = image;
 
@@ -69,7 +70,7 @@ int ImagePyramid::num_levels(const Image& image, float f){
 
 //Interpolates filter strength across levels
 float ImagePyramid::filter_strength_at_level(float f, int level, int totalLevels){
-    return 0.0f;
+    return f * std::pow(1.f/f, level / (totalLevels-1));
 }
 
 //Set pyramid level for coarse consistency and upsampling
@@ -155,11 +156,4 @@ Image ImagePyramid::blur(const Image& image){
     
     
     return newImage;
-}
-
-
-
-//Downsample respecting filter strength
-Image ImagePyramid::downsample_to_level(const Image& image, float f, int level){
-    return image;
 }

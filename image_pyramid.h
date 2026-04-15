@@ -25,10 +25,7 @@ private:
 
     static Image blur(const Image& image);
     static float pixWeight(int xdiff, int ydiff, float sigma); // sigma = blur strength
-    static Image downsample(const Image& image);
-
-    //Downsample respecting filter strength
-    static Image downsample_to_level(const Image& image, float f, int level);
+    static Image downsample(const Image& image, float fStrength);
 
 };
 

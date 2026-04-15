@@ -12,6 +12,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
     //Make source texture image pyramid - only do this once!
     std::cout << texturePath.toStdString() << std::endl;
     Image tex = ImageUtils::readImage(texturePath, false);
+    m_sourceTexture = tex;
     m_texPyramid = ImagePyramid::make_gaussian_pyramid(tex, 0.5f);
 
     //save for debug
@@ -19,6 +20,13 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
         QString outPath = QString("../color-me-noisy/debug_pyramid/tex_pyramid_level_%1.png").arg(i);
         ImageUtils::writeImage(m_texPyramid[i], outPath);
     }
+
+    Image prevOutput;
+    Image cur_frame = ImageUtils::readImage(framePaths[0], true);
+    Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
+    m_outputFrames.push_back(output_frame);
+
+
 
 //    Image prevOutput;
 //    //main loop
@@ -59,11 +67,14 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
+        Image cur_image = framePyramid[level];
+        QString outPath = QString("../color-me-noisy/debug_pyramid/framepyramid_level_%1.png").arg(level);
+        ImageUtils::writeImage(cur_image, outPath);
 
         //Update this to be the correct texture
-        Image s_deformed = deformImage(m_sourceTexture);
+//        Image s_deformed = deformImage(m_sourceTexture);
 
-        output_frame = patchmatch(s_deformed, m_texPyramid[level]);
+//        output_frame = patchmatch(s_deformed, m_texPyramid[level]);
 
         if (level > 0) { //dont upsample at the last level
             output_frame = ImagePyramid::upsample(output_frame);

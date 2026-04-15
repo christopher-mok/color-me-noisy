@@ -8,7 +8,7 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
     //Do we determine num levels in here or explicitly in cult?
 //    int numLevels = num_levels(image, filterStrength);
 
-    int numLevels = 5;
+    int numLevels = 3;
     
     for(int i = 0; i < numLevels; i++){
         //get filter strength at level by calling that func? then can pass a filter strenhgth
@@ -22,8 +22,8 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
 }
 
 Image ImagePyramid::downsample(const Image& image, float fStrength){
-    //Image blurred_image = blur(image);
-    Image blurred_image = image;
+    Image blurred_image = blur(image);
+//    Image blurred_image = image;
 
     //basically blurred[::2, ::2], or take every other pixel
     int w = image.width / 2;
@@ -46,6 +46,7 @@ Image ImagePyramid::downsample(const Image& image, float fStrength){
 }
 
 Image ImagePyramid::upsample(const Image& image){
+    // biliear filtering to to double pix count
     return image;
 }
 
@@ -114,7 +115,7 @@ std::vector<float> makeKernel(int radius, float sigma){
 }
 
 Image ImagePyramid::blur(const Image& image){
-    float sigma = 1.0f;
+    float sigma = 3.0f;
     int radius = 3.0f * sigma;
     int diam = radius*2+1;
 

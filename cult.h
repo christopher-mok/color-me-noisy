@@ -3,7 +3,9 @@
 
 #include <iostream>
 #include <QStringList>
-#include <Eigen/Dense>
+#include "Eigen/Core"
+#include "Eigen/Eigen"
+#include "Eigen/Dense"
 
 #include "image_utils.h"
 #include "patchmatch.h"

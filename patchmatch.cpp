@@ -113,13 +113,44 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,
                   NNF& nnf, int patchRadius){
     //init sx and sy to nnf[x,y], this is current best
+    Match bestMatch = nnf[x][y];
+    int sx = bestMatch.u;
+    int sy = bestMatch.v;
     //initialize search radius
+    int radius = std::max(source.width, source.height);
+
+    std::uniform_real_distribution<float> distX(-1.f, 1.f);
+    std::uniform_real_distribution<float> distY(-1.f, 1.f);
+
+    float bestDist = bestMatch.dist;
+    int bestX = sx;
+    int bestY = sy;
 
     //while rad > 1
+    while(radius > 1){
+        int cx, cy;
         //randomly sample in search radius around current best
+        do{
+            cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
+            cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
+        }while(isValidPatch(source, cx, cy, patchRadius));
         //if valid, check if patchdist of new sample < best sample
+        float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
+        if(c_distance < bestDist){
+            bestDist = c_distance;
+            bestX = cx;
+            bestY = cy;
+        }
         //if so, set nnf[x, y] to new match
 
         //shrink radius by half
+        radius *= 0.5f;
+    }
+
+    bestMatch.dist = bestDist;
+    bestMatch.u = bestX;
+    bestMatch.v = bestY;
+
+    nnf[x][y] = bestMatch;
 }
 

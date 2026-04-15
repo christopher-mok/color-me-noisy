@@ -80,6 +80,10 @@ Image Cult::patchmatch(const Image& target, const Image& source){
     return output_image;
 }
 
+Image Cult::vote(const Image& target, const Image& source, std::vector<std::vector<Match>>& nnf){
+    return target;
+}
+
 Image Cult::deformImage(const Image& image){
     int gridSize = 50; //make this class variable
 

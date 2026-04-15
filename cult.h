@@ -33,7 +33,7 @@ private:
     Image deformImage(const Image& image);
     Image patchmatch(const Image& target, const Image& source);
 
-    Image vote(const Image& target, const Image& source, NNF nnf);
+    Image vote(const Image& target, const Image& source, NNF& nnf);
     
     const int PATCH_RADIUS = 1;
     const int PATCHMATCH_ITERATIONS = 1;

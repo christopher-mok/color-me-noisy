@@ -88,17 +88,38 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
     }
 }
 
+//For neighbors left and above
 void Patchmatch::propogateForward(int x, int y, const Image& target, const Image& source,
                       NNF& nnf, int patchRadius){
-
+    //TODO
+    //init:
+        //candidate 1: input x,y nnf
+        //candidate 2: nnf[x-1, y] + (1, 0)
+        //candidate 3: nnf[x, y-1] + (0, 1)
+    //set nnf[x,y] to candidate with lowest patchDistance
 }
 
+//for neighbors right and below
 void Patchmatch::propogateBackward(int x, int y, const Image& target,
                        const Image& source, NNF& nnf, int patchRadius){
+    //TODO
+    //init:
+        //candidate 1: input x,y nnf
+        //candidate 2: nnf[x+1, y] - (1, 0)
+        //candidate 3: nnf[x, y+1] - (0, 1)
+    //set nnf[x,y] to candidate with lowest patchDistance
 }
 
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,
                   NNF& nnf, int patchRadius){
+    //init sx and sy to nnf[x,y], this is current best
+    //initialize search radius
 
+    //while rad > 1
+        //randomly sample in search radius around current best
+        //if valid, check if patchdist of new sample < best sample
+        //if so, set nnf[x, y] to new match
+
+        //shrink radius by half
 }
 

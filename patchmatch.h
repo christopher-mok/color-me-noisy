@@ -2,6 +2,7 @@
 #define PATCHMATCH_H
 
 #include "image_utils.h"
+#include <random>
 
 struct Match{
     int u;
@@ -20,6 +21,8 @@ public:
                               int iterations);
 
 private:
+    static std::mt19937 rng;
+
     static float patchDistance(const Image& target, int tx, int ty,
                                const Image& source, int sx, int sy,
                                int patchRadius);

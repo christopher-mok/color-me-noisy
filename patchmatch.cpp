@@ -97,6 +97,34 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         //candidate 2: nnf[x-1, y] + (1, 0)
         //candidate 3: nnf[x, y-1] + (0, 1)
     //set nnf[x,y] to candidate with lowest patchDistance
+    Match current = nnf[x][y];
+    if(isValidPatch(target, x-1, y, patchRadius)){
+        Match left = nnf[x-1][y];
+        int cx = left.u + 1;
+        int cy = left.v;
+        float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+
+        if(isValidPatch(source, cx, cy, patchRadius) && c_dist < current.dist){
+            current.dist = c_dist;
+            current.u = cx;
+            current.v = cy;
+        }
+    }
+
+    if(isValidPatch(target, x, y-1, patchRadius)){
+        Match left = nnf[x][y-1];
+        int cx = left.u;
+        int cy = left.v + 1;
+        float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+
+        if(isValidPatch(source, cx, cy, patchRadius) && c_dist < current.dist){
+            current.dist = c_dist;
+            current.u = cx;
+            current.v = cy;
+        }
+    }
+
+    nnf[x][y] = current;
 }
 
 //for neighbors right and below

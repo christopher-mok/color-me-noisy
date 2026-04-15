@@ -36,8 +36,8 @@ private:
 
     Image vote(const Image& target, const Image& source, NNF& nnf);
     
-    const int PATCH_RADIUS = 1;
-    const int PATCHMATCH_ITERATIONS = 1;
+    const int PATCH_RADIUS = 5;
+    const int PATCHMATCH_ITERATIONS = 4;
 };
 
 #endif // CULT_H

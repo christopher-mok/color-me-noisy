@@ -94,7 +94,50 @@ Image Cult::patchmatch(const Image& target, const Image& source){
 }
 
 Image Cult::vote(const Image& target, const Image& source, std::vector<std::vector<Match>>& nnf){
-    return target;
+    Image processed_frame = target;
+    std::vector<RGB> processed_pixels;
+    //For each pixel
+    const std::vector<RGB>& pixels = target.pixels;
+    for(int i = 0; i < pixels.size(); i++){
+        int x = i%target.width;
+        int y = i/target.width;
+        RGB accum;
+        accum.r = 0,accum.g = 0, accum.b = 0;
+        int count = 0;
+        //For each pixel in the patch radius around iterated pixel
+        for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+            for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+                //Offset position
+                int px = x + dx;
+                int py = y + dy;
+
+                //patch validity check
+                if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
+                    Match match = nnf[px][py];
+
+                    //match to source
+                    int sx = match.u - dx;
+                    int sy = match.v - dy;
+
+                    if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
+                        RGB rgb = ImageUtils::rgbAt(source, sx, sy);
+                        accum.r += rgb.r;
+                        accum.g += rgb.g;
+                        accum.b += rgb.b;
+                    }
+                    count++;
+                }
+            }
+        }
+        RGB outRGB;
+        if(count==0) std::cout<<"No matches found in voting";
+        outRGB.r = accum.r/count;
+        outRGB.g = accum.g/count;
+        outRGB.b = accum.b/count;
+        processed_pixels.push_back(outRGB);
+    }
+    processed_frame.pixels = processed_pixels;
+    return processed_frame;
 }
 
 Image Cult::deformImage(const Image& image){

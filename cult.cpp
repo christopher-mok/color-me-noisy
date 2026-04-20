@@ -53,6 +53,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 }
 
 Image Cult::processFrame(const Image& frame, const Image& prevOutput){
+    std::cout<<"Processing frame"<<std::endl;
     std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, 0.5f);
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 

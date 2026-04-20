@@ -114,6 +114,28 @@ std::vector<float> makeKernel(int radius, float sigma){
 
 }
 
+std::vector<float> makeKernel1D(int radius, float sigma){
+    int diam = radius * 2 + 1;
+    std::vector<float> mask(diam*diam);
+
+    for (int k=0; k < diam; k++){
+        float diff = float(abs(radius-k));
+        mask[k] = std::exp(-(diff*diff)/(2*sigma*sigma));
+    }
+
+    // Normalize
+    float sum = 0.f;
+    for (float w : mask){
+        sum += w;
+    }
+    for (float& w : mask) {
+        w /= sum;
+    }
+
+    return mask;
+
+}
+
 Image ImagePyramid::blur(const Image& image){
     float sigma = 3.0f;
     int radius = 3.0f * sigma;
@@ -124,9 +146,13 @@ Image ImagePyramid::blur(const Image& image){
     Image newImage;
 
     // make kernel
-    std::vector<float> kern = makeKernel(radius, sigma);
+    //std::vector<float> kern = makeKernel(radius, sigma);
+    std::vector<float> kern = makeKernel1D(radius, sigma);
 
-    // Loop over every image pixel
+
+    //Horizontal pass
+    std::vector<RGB> hPixels(image.width * image.height);
+
     for (int r = 0; r < image.height; r++){
         for (int c = 0; c < image.width; c++){
             // initiate accumulation variable
@@ -136,14 +162,11 @@ Image ImagePyramid::blur(const Image& image){
             newRGB.b = 0;
             newRGB.a = 1.0f;
             // loop through each index in the kernel and get weight
-            for (int ki=0; ki < diam*diam; ki ++){
+            for (int ki=0; ki < diam; ki ++){
                 // find corresponding coord in image
-                int kx = ki % diam;
-                int ky = std::floor(ki/diam);
-                int imgY = std::clamp(r-radius+ky, 0, image.height-1);
-                int imgX = std::clamp(c-radius+kx, 0, image.width-1);
-                
-                RGB targRGB = ImageUtils::rgbAt(image, imgX, imgY);
+                //int kx = ki % diam;
+                int imgX = std::clamp(c-radius+ki, 0, image.width-1);
+                RGB targRGB = ImageUtils::rgbAt(image, imgX, r);
 
                 // multiply weight and accumulate
                 float w = kern[ki];
@@ -154,14 +177,50 @@ Image ImagePyramid::blur(const Image& image){
 
             // add to newPixels
             int imageInd = r * image.width + c;
-            newPixels[imageInd] = newRGB;
+            hPixels[imageInd] = newRGB;
 
         }
 
     }
+
+    Image hImage = image;
+    hImage.pixels = hPixels;
+
+    //Vertical Pass
+    std::vector<RGB> vPixels(image.width * image.height);
+    for (int r = 0; r < image.height; r++){
+        for (int c = 0; c < image.width; c++){
+            // initiate accumulation variable
+            RGB newRGB;
+            newRGB.r = 0;
+            newRGB.g = 0;
+            newRGB.b = 0;
+            newRGB.a = 1.0f;
+            // loop through each index in the kernel and get weight
+            for (int ki=0; ki < diam; ki ++){
+                // find corresponding coord in image
+                //int kx = ki % diam;
+                int imgY = std::clamp(r-radius+ki, 0, image.height-1);
+                RGB targRGB = ImageUtils::rgbAt(image, c, imgY);
+
+                // multiply weight and accumulate
+                float w = kern[ki];
+                newRGB.r += w * targRGB.r;
+                newRGB.g += w * targRGB.g;
+                newRGB.b += w * targRGB.b;
+            }
+
+            // add to newPixels
+            int imageInd = r * image.width + c;
+            vPixels[imageInd] = newRGB;
+
+        }
+
+    }
+
     // make new image
     newImage = image;
-    newImage.pixels = newPixels;
+    newImage.pixels = vPixels;
     return newImage;
     
 }

@@ -66,16 +66,19 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     //                m_outputFrames.push_back(output_frame);
     //        }
 
+    Image s_deformed = deformImage(m_sourceTexture);
+    std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, 0.5f);
+
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
-        Image cur_image = framePyramid[level];
         QString outPath = QString("../color-me-noisy/debug_pyramid/framepyramid_level_%1.png").arg(level);
+
+        //debugging
+        Image cur_image = framePyramid[level];
         ImageUtils::writeImage(cur_image, outPath);
 
         //Update this to be the correct texture
-//        Image s_deformed = deformImage(m_sourceTexture);
-
-//        output_frame = patchmatch(s_deformed, m_texPyramid[level]);
+        output_frame = patchmatch(sourcePyramid[level], m_texPyramid[level]);
 
         if (level > 0) { //dont upsample at the last level
             output_frame = ImagePyramid::upsample(output_frame);

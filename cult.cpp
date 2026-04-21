@@ -26,7 +26,8 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
     Image prevOutput;
     // Image cur_frame = ImageUtils::readImage(framePaths[0], true);
     // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
-    for(int i = 0; i < m_outputFrames.size(); i++){
+    std::cout<<"Beginning frame processing"<<std::endl;
+    for(int i = 0; i < m_frames.size(); i++){
 
         // //old test frames
         // Image cur_frame = ImageUtils::readImage(framePaths[i], true);
@@ -53,7 +54,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
 //    }
 
-    std::cout<<"Cult is running! Send us your SSN and credit card number to join :D"<< std::endl;
+    std::cout<<"Cult is running on Tuesdays! Send us your SSN and credit card number to join :D"<< std::endl;
     std::cout<<"Color Cult loves you <3" << std::endl;
 
     saveFrames("../color-me-noisy/output_frames");

@@ -21,12 +21,21 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
         ImageUtils::writeImage(m_texPyramid[i], outPath);
     }
 
+    m_frames = ImageUtils::readVideo("../color-me-noisy/source_videos/walker.mov");
+
     Image prevOutput;
-    Image cur_frame = ImageUtils::readImage(framePaths[0], true);
-    Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
-    m_outputFrames.push_back(output_frame);
+    // Image cur_frame = ImageUtils::readImage(framePaths[0], true);
+    // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
+    for(int i = 0; i < m_outputFrames.size(); i++){
 
+        // //old test frames
+        // Image cur_frame = ImageUtils::readImage(framePaths[i], true);
+        // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
+        Image output_frame = processFrame(m_frames[i], prevOutput);
 
+        m_outputFrames.push_back(output_frame);
+        std::cout<<"Processed frame #"<<i<<std::endl;
+    }
 
 //    Image prevOutput;
 //    //main loop
@@ -55,6 +64,8 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     std::cout<<"Processing frame"<<std::endl;
     std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, 0.5f);
+    std::cout<<"Created frame pyramids"<<std::endl;
+
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
     //        //MAIN LOOP
@@ -68,6 +79,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     Image s_deformed = deformImage(m_sourceTexture);
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, 0.5f);
+    std::cout<<"Created source pyramids"<<std::endl;
 
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
@@ -80,19 +92,24 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         //Update this to be the correct texture
         output_frame = patchmatch(sourcePyramid[level], m_texPyramid[level]);
 
+        QString dbg_dir = QString("../color-me-noisy/debug_pyramid/");
+        QString dbgPath = QString("%1/dbg_frame_%2.png").arg(dbg_dir).arg(level);
+        ImageUtils::writeImage(output_frame, dbgPath);
+
         if (level > 0) { //dont upsample at the last level
             output_frame = ImagePyramid::upsample(output_frame);
         }
     }
-    return output_frame;
 
 }
 
 Image Cult::patchmatch(const Image& target, const Image& source){
     Image output_image;
 
+    std::cout<<"Running Patchmatch"<<std::endl;
     NNF nnf = Patchmatch::run_patchmatch(target, source, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
     output_image = vote(target, source, nnf);
+    std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;
 }
 

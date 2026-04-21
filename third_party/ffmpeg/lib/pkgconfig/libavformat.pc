@@ -1,0 +1,14 @@
+prefix=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/lib
+includedir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/include
+
+Name: libavformat
+Description: FFmpeg container format library
+Version: 62.13.102
+Requires: 
+Requires.private: libavcodec >= 62.30.100, libswresample >= 6.4.100, libavutil >= 60.30.100
+Conflicts:
+Libs: -L${libdir}  -lavformat 
+Libs.private: -lm -lbz2 -lz -framework CoreFoundation -framework Security
+Cflags: -I${includedir}

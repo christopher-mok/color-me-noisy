@@ -29,7 +29,7 @@ Image ImagePyramid::downsample(const Image& image, float fStrength){
     // int w = image.width / 2;
     // int h = image.height / 2;
     int w = static_cast<int>(image.width * 0.85f);
-    int h = static_cast<int>(image.width * 0.85f);
+    int h = static_cast<int>(image.height * 0.85f);
 
     Image out;
     out.width = w;
@@ -39,7 +39,9 @@ Image ImagePyramid::downsample(const Image& image, float fStrength){
 
     for (int r = 0; r < h; r++) {
         for (int c = 0; c < w; c++) {
-            out.pixels[r * w + c] = blurred_image.pixels[(r*2) * image.width + (c*2)];
+            out.pixels[r * w + c] = blurred_image.pixels[static_cast<int>(r / 0.85f)
+                                                             * image.width +
+                                                         static_cast<int>(c / 0.85f)];
         }
     }
 

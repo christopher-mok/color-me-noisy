@@ -20,7 +20,9 @@ public:
 
 private:
     QString dirpath = "../color-me-noisy/frames";
-    QString m_texturePath = "../color-me-noisy/textures/bunnie.jpg"; //Path to image texture
+    // QString m_texturePath = "../color-me-noisy/textures/bunnie.jpg"; //Path to image texture
+    QString m_texturePath = "../color-me-noisy/textures/S.png"; //Path to image texture
+    QString m_videoPath = "../color-me-noisy/source_videos/walker.mov";
     QStringList m_framePaths; // sorted list of image file paths
 
     QLabel *m_display;

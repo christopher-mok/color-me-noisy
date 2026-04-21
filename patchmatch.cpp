@@ -1,4 +1,6 @@
 #include "patchmatch.h"
+#include <iostream>
+
 
 
 //TARGET: the frame we are stylizing
@@ -45,11 +47,11 @@ float Patchmatch::patchDistance(const Image& target, int tx, int ty,
             RGB target_rgb = ImageUtils::rgbAt(target, tx+dx, ty+dy);
             RGB source_rgb = ImageUtils::rgbAt(source, sx+dx, sy+dy);
 
-            float r2 = std::pow(target_rgb.r-source_rgb.r, 2);
-            float g2 = std::pow(target_rgb.g - source_rgb.g, 2);
-            float b2 = std::pow(target_rgb.b - source_rgb.b, 2);
+            float dr = target_rgb.r - source_rgb.r;
+            float dg = target_rgb.g - source_rgb.g;
+            float db = target_rgb.b - source_rgb.b;
 
-            dist+= r2 + g2 + b2;
+            dist += dr*dr + dg*dg + db*db;
         }
     }
 
@@ -67,6 +69,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
     std::uniform_int_distribution<int> distX(0, source.width - 1);
     std::uniform_int_distribution<int> distY(0, source.height - 1);
 
+    nnf.resize(target.width, std::vector<Match>(target.height));
+
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
             int sx;
@@ -76,7 +80,7 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
                 sx = distX(rng);
                 sy = distY(rng);
                 //randomize sy to 0 to source.height
-            }while(isValidPatch(source, sx, sy, patchRadius));
+            }while(!isValidPatch(source, sx, sy, patchRadius));
 
             Match match;
             match.u = sx;
@@ -86,6 +90,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
             nnf[x][y] = match;
         }
     }
+
+    std::cout<<"NNF initialized"<<std::endl;
 }
 
 //For neighbors left and above
@@ -158,10 +164,13 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     while(radius > 1){
         int cx, cy;
         //randomly sample in search radius around current best
-        do{
-            cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
-            cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
-        }while(isValidPatch(source, cx, cy, patchRadius));
+        // do{
+        //     cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
+        //     cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
+        // }while(!isValidPatch(source, cx, cy, patchRadius));
+
+        cx = std::clamp(sx + (int)(distX(rng)*radius), patchRadius, source.width-1-patchRadius);
+        cy = std::clamp(sy + (int)(distY(rng)*radius), patchRadius, source.height-1-patchRadius);
         //if valid, check if patchdist of new sample < best sample
         float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
         if(c_distance < bestDist){

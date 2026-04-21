@@ -1,0 +1,3 @@
+[submodule "third_party/ffmpeg-src"]
+	path = third_party/ffmpeg-src
+	url = https://git.ffmpeg.org/ffmpeg.git

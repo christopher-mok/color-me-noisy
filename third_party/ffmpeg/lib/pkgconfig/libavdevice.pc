@@ -1,0 +1,14 @@
+prefix=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/lib
+includedir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/include
+
+Name: libavdevice
+Description: FFmpeg device handling library
+Version: 62.4.100
+Requires: 
+Requires.private: libavfilter >= 11.16.100, libswscale >= 9.7.100, libavformat >= 62.13.102, libavcodec >= 62.30.100, libswresample >= 6.4.100, libavutil >= 60.30.100
+Conflicts:
+Libs: -L${libdir}  -lavdevice 
+Libs.private: -framework Foundation -framework AudioToolbox -framework CoreAudio -lm -framework AVFoundation -framework CoreVideo -framework CoreMedia -framework CoreGraphics -framework AudioToolbox -pthread
+Cflags: -I${includedir}

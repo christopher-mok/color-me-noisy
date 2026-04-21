@@ -27,6 +27,8 @@ public:
 
     static void writeImage(Image& image, const QString& path);
 
+    static std::vector<Image> readVideo(const QString& path);
+
     static RGB rgbAt(const Image& img, int x, int y);
 };
 

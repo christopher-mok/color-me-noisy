@@ -1,0 +1,14 @@
+prefix=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg
+exec_prefix=${prefix}
+libdir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/lib
+includedir=/Users/christophermok/Desktop/cs2240/color-me-noisy/third_party/ffmpeg-src/../ffmpeg/include
+
+Name: libavcodec
+Description: FFmpeg codec library
+Version: 62.30.100
+Requires: 
+Requires.private: libswresample >= 6.4.100, libavutil >= 60.30.100
+Conflicts:
+Libs: -L${libdir}  -lavcodec 
+Libs.private: -liconv -lm -framework AudioToolbox -pthread -lz -framework VideoToolbox -framework CoreFoundation -framework CoreMedia -framework CoreVideo -framework CoreServices
+Cflags: -I${includedir}

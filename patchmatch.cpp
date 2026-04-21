@@ -37,6 +37,7 @@ NNF Patchmatch::run_patchmatch(const Image& target,
 
 std::mt19937 Patchmatch::rng(std::random_device{}());
 
+//
 float Patchmatch::patchDistance(const Image& target, int tx, int ty,
                                 const Image& source, int sx, int sy,
                                 int patchRadius){
@@ -103,7 +104,12 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         //candidate 2: nnf[x-1, y] + (1, 0)
         //candidate 3: nnf[x, y-1] + (0, 1)
     //set nnf[x,y] to candidate with lowest patchDistance
+
+
+    // candidate 1
     Match current = nnf[x][y];
+
+    // candidate 2
     if(isValidPatch(target, x-1, y, patchRadius)){
         Match left = nnf[x-1][y];
         int cx = left.u + 1;
@@ -117,6 +123,7 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         }
     }
 
+    // candidate 3
     if(isValidPatch(target, x, y-1, patchRadius)){
         Match left = nnf[x][y-1];
         int cx = left.u;
@@ -142,6 +149,50 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
         //candidate 2: nnf[x+1, y] - (1, 0)
         //candidate 3: nnf[x, y+1] - (0, 1)
     //set nnf[x,y] to candidate with lowest patchDistance
+
+    // candidate 1:
+    Match curr = nnf[x][y];
+
+    // candidate 2:
+    if (isValidPatch(target, x+1, y, patchRadius)){
+
+        Match neigh = nnf[x+1][y];
+        int sx = neigh.u-1;
+        int sy = neigh.v;
+        float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+
+        bool neighValid = isValidPatch(source, sx, sy, patchRadius);
+        if (dist < curr.dist && neighValid){
+            Match newMatch;
+            newMatch.u = sx;
+            newMatch.v = sy;
+            newMatch.dist = dist;
+            curr = newMatch;
+        }
+    }
+
+    // candidate 3:
+    if (isValidPatch(target, x, y+1, patchRadius)){
+
+        Match neigh = nnf[x][y+1];
+        int sx = neigh.u;
+        int sy = neigh.v-1;
+        float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+
+        bool neighValid = isValidPatch(source, sx, sy, patchRadius);
+        if (dist < curr.dist && neighValid){
+            Match newMatch;
+            newMatch.u = sx;
+            newMatch.v = sy;
+            newMatch.dist = dist;
+            curr = newMatch;
+        }
+    }
+
+    nnf[x][y] = curr;
+
+
+
 }
 
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,

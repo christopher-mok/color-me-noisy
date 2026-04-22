@@ -50,88 +50,88 @@ Image ImagePyramid::downsample(const Image& image, float fStrength){
 }
 
 //Bilinear upsampling
-// Image ImagePyramid::upsample(const Image& image){
-//     // biliear filtering to to double pix count
-//     int newWidth = image.width / 0.85f;
-//     int newHeight = image.height / 0.85f;
-
-//     Image output;
-//     output.width = newWidth;
-//     output.height = newHeight;
-
-//     std::vector<RGB> pixels;
-//     pixels.resize(newWidth*newHeight);
-
-//     for(int y = 0; y < newHeight; y++){
-//         for(int x = 0; x < newWidth; x++){
-//             //sample pixel on original downsampled image
-//             float sx = x*0.85;
-//             float sy = y*0.85;
-
-//             //surrounding 4 pixels
-//             int x0 = std::floor(sx);
-//             int y0 = std::floor(sy);
-//             int x1 = std::min(x0+1, image.width-1);
-//             int y1 = std::min(y0+1, image.height-1);
-
-//             //weights
-//             float tx = sx - x0;
-//             float ty = sy - y0;
-
-//             RGB topLeft = ImageUtils::rgbAt(image, x0, y0);
-//             RGB topRight = ImageUtils::rgbAt(image, x1, y0);
-//             RGB bottomLeft = ImageUtils::rgbAt(image, x0, y1);
-//             RGB bottomRight = ImageUtils::rgbAt(image, x1, y1);
-
-//             float r = (1.f-tx)*(1.f-ty)*topLeft.r +
-//                       (tx)*(1-ty)*topRight.r +
-//                       (1.f-tx)*(ty)*bottomLeft.r +
-//                       (tx)*(ty)*bottomRight.r;
-
-//             float g = (1.f-tx)*(1.f-ty)*topLeft.g +
-//                       (tx)*(1-ty)*topRight.g +
-//                       (1.f-tx)*(ty)*bottomLeft.g +
-//                       (tx)*(ty)*bottomRight.g;
-
-//             float b = (1.f-tx)*(1.f-ty)*topLeft.b +
-//                       (tx)*(1-ty)*topRight.b +
-//                       (1.f-tx)*(ty)*bottomLeft.b +
-//                       (tx)*(ty)*bottomRight.b;
-
-//             RGB out_pixel;
-//             out_pixel.r = r;
-//             out_pixel.g = g;
-//             out_pixel.b = b;
-
-//             pixels[x + y*newWidth] = out_pixel;
-//         }
-//     }
-
-//     output.pixels = pixels;
-
-//     return output;
-// }
-
-//Nearest neighbor upsampling
 Image ImagePyramid::upsample(const Image& image){
+    // biliear filtering to to double pix count
     int newWidth = image.width / 0.85f;
     int newHeight = image.height / 0.85f;
 
     Image output;
     output.width = newWidth;
     output.height = newHeight;
-    output.pixels.resize(newWidth * newHeight);
+
+    std::vector<RGB> pixels;
+    pixels.resize(newWidth*newHeight);
 
     for(int y = 0; y < newHeight; y++){
         for(int x = 0; x < newWidth; x++){
-            int sx = std::clamp((int)(x * 0.85f), 0, image.width - 1);
-            int sy = std::clamp((int)(y * 0.85f), 0, image.height - 1);
-            output.pixels[y * newWidth + x] = ImageUtils::rgbAt(image, sx, sy);
+            //sample pixel on original downsampled image
+            float sx = x*0.85;
+            float sy = y*0.85;
+
+            //surrounding 4 pixels
+            int x0 = std::floor(sx);
+            int y0 = std::floor(sy);
+            int x1 = std::min(x0+1, image.width-1);
+            int y1 = std::min(y0+1, image.height-1);
+
+            //weights
+            float tx = sx - x0;
+            float ty = sy - y0;
+
+            RGB topLeft = ImageUtils::rgbAt(image, x0, y0);
+            RGB topRight = ImageUtils::rgbAt(image, x1, y0);
+            RGB bottomLeft = ImageUtils::rgbAt(image, x0, y1);
+            RGB bottomRight = ImageUtils::rgbAt(image, x1, y1);
+
+            float r = (1.f-tx)*(1.f-ty)*topLeft.r +
+                      (tx)*(1-ty)*topRight.r +
+                      (1.f-tx)*(ty)*bottomLeft.r +
+                      (tx)*(ty)*bottomRight.r;
+
+            float g = (1.f-tx)*(1.f-ty)*topLeft.g +
+                      (tx)*(1-ty)*topRight.g +
+                      (1.f-tx)*(ty)*bottomLeft.g +
+                      (tx)*(ty)*bottomRight.g;
+
+            float b = (1.f-tx)*(1.f-ty)*topLeft.b +
+                      (tx)*(1-ty)*topRight.b +
+                      (1.f-tx)*(ty)*bottomLeft.b +
+                      (tx)*(ty)*bottomRight.b;
+
+            RGB out_pixel;
+            out_pixel.r = r;
+            out_pixel.g = g;
+            out_pixel.b = b;
+
+            pixels[x + y*newWidth] = out_pixel;
         }
     }
 
+    output.pixels = pixels;
+
     return output;
 }
+
+//Nearest neighbor upsampling
+// Image ImagePyramid::upsample(const Image& image){
+//     int newWidth = image.width / 0.85f;
+//     int newHeight = image.height / 0.85f;
+
+//     Image output;
+//     output.width = newWidth;
+//     output.height = newHeight;
+//     output.pixels.resize(newWidth * newHeight);
+
+//     for(int y = 0; y < newHeight; y++){
+//         for(int x = 0; x < newWidth; x++){
+//             int sx = std::clamp((int)(x * 0.85f), 0, image.width - 1);
+//             int sy = std::clamp((int)(y * 0.85f), 0, image.height - 1);
+//             output.pixels[y * newWidth + x] = ImageUtils::rgbAt(image, sx, sy);
+//         }
+//     }
+
+//     return output;
+// }
 
 
 

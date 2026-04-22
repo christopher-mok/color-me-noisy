@@ -109,7 +109,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         } else {
             // Finer levels: upsample previous output to use as source seed
             // Blend or directly use upsampled result as the source for this level
-            output_frame = patchmatch(cur_target, output_frame);
+            output_frame = patchmatch(output_frame, cur_source);
         }
 
 

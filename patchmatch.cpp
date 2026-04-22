@@ -1,5 +1,6 @@
 #include "patchmatch.h"
 #include <iostream>
+#include <omp.h>
 
 
 

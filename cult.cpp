@@ -2,6 +2,7 @@
 #include "image_utils.h"
 #include "image_pyramid.h"
 #include <random>
+#include <omp.h>
 
 
 Cult::Cult() {

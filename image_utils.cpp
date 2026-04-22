@@ -46,7 +46,8 @@ void ImageUtils::writeImage(Image& img, const QString& path) {
                 static_cast<int>(pixel.r * 255),
                 static_cast<int>(pixel.g * 255),
                 static_cast<int>(pixel.b * 255),
-                static_cast<int>(pixel.a * 255)
+                //static_cast<int>(pixel.a * 255)
+                255
             );
             qimg.setPixel(x, y, qrbg);
         }

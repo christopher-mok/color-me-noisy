@@ -82,25 +82,46 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, 0.5f);
     std::cout<<"Created source pyramids"<<std::endl;
 
+    std::cout<<"Target image dimensions: "<<frame.width<<"x"<<frame.height<<std::endl;
+
+    std::cout << "Frame pyramid levels: " << framePyramid.size() << std::endl;
+    for (int i = 0; i < framePyramid.size(); i++) {
+        std::cout << "  framePyramid[" << i << "]: " << framePyramid[i].width << "x" << framePyramid[i].height << std::endl;
+    }
+
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
         QString outPath = QString("../color-me-noisy/debug_pyramid/framepyramid_level_%1.png").arg(level);
-
         //debugging
         Image cur_image = framePyramid[level];
         ImageUtils::writeImage(cur_image, outPath);
 
         //Update this to be the correct texture
-        output_frame = patchmatch(sourcePyramid[level], m_texPyramid[level]);
+        std::cout<<"Current pyramid level "<<level<<std::endl;
+        std::cout<<"Target level "<<level<<" dimensions: "<<cur_image.width<<"x"<<cur_image.height<<std::endl;
 
-        QString dbg_dir = QString("../color-me-noisy/debug_pyramid/");
-        QString dbgPath = QString("%1/dbg_frame_%2.png").arg(dbg_dir).arg(level);
+        Image& cur_target = framePyramid[level];
+        Image& cur_source = sourcePyramid[level];
+
+        if (level == (int)framePyramid.size() - 1) {
+            // Coarsest level: no seed, just match directly
+            output_frame = patchmatch(cur_target, cur_source);
+        } else {
+            // Finer levels: upsample previous output to use as source seed
+            // Blend or directly use upsampled result as the source for this level
+            output_frame = patchmatch(cur_target, output_frame);
+        }
+
+
+        QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
         ImageUtils::writeImage(output_frame, dbgPath);
 
         if (level > 0) { //dont upsample at the last level
             output_frame = ImagePyramid::upsample(output_frame);
         }
     }
+
+    return output_frame;
 
 }
 
@@ -145,8 +166,9 @@ Image Cult::vote(const Image& target, const Image& source, std::vector<std::vect
                         accum.r += rgb.r;
                         accum.g += rgb.g;
                         accum.b += rgb.b;
+                        count++;
                     }
-                    count++;
+
                 }
             }
         }
@@ -155,6 +177,7 @@ Image Cult::vote(const Image& target, const Image& source, std::vector<std::vect
         outRGB.r = accum.r/count;
         outRGB.g = accum.g/count;
         outRGB.b = accum.b/count;
+        outRGB.a = 255;
         processed_pixels.push_back(outRGB);
     }
     processed_frame.pixels = processed_pixels;

@@ -19,6 +19,8 @@ NNF Patchmatch::run_patchmatch(const Image& target,
                 for(int x = 0; x < target.width; x++){
                     propogateForward(x, y, target, source, nnf, patchRadius);
                     randomSearch(x, y, target, source, nnf, patchRadius);
+
+                    //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
             }
         }else{ //Backward propogation
@@ -26,9 +28,13 @@ NNF Patchmatch::run_patchmatch(const Image& target,
                 for(int x = 0; x < target.width; x++){
                     propogateBackward(x, y, target, source, nnf, patchRadius);
                     randomSearch(x, y, target, source, nnf, patchRadius);
+
+                    //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
             }
         }
+
+        std::cout<<"Iteration "<<i<<" done"<<std::endl;
     }
 
     return nnf;
@@ -198,6 +204,7 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,
                   NNF& nnf, int patchRadius){
     //init sx and sy to nnf[x,y], this is current best
+
     Match bestMatch = nnf[x][y];
     int sx = bestMatch.u;
     int sy = bestMatch.v;
@@ -215,13 +222,13 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     while(radius > 1){
         int cx, cy;
         //randomly sample in search radius around current best
-        // do{
-        //     cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
-        //     cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
-        // }while(!isValidPatch(source, cx, cy, patchRadius));
+        do{
+            cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
+            cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
+        }while(!isValidPatch(source, cx, cy, patchRadius));
 
-        cx = std::clamp(sx + (int)(distX(rng)*radius), patchRadius, source.width-1-patchRadius);
-        cy = std::clamp(sy + (int)(distY(rng)*radius), patchRadius, source.height-1-patchRadius);
+        // cx = std::clamp(sx + (int)(distX(rng)*radius), patchRadius, source.width-1-patchRadius);
+        // cy = std::clamp(sy + (int)(distY(rng)*radius), patchRadius, source.height-1-patchRadius);
         //if valid, check if patchdist of new sample < best sample
         float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
         if(c_distance < bestDist){

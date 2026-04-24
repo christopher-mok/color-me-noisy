@@ -9,10 +9,11 @@
 NNF Patchmatch::run_patchmatch(const Image& target,
                                const Image& source,
                                int patchRadius,
-                               int iterations){
+                               int iterations, NNF* prevNNF){
     NNF nnf;
     rng.seed(std::random_device{}());
-    initializeNNF(target, source, nnf, patchRadius);
+
+        initializeNNF(target, source, nnf, patchRadius, prevNNF);
 
     for(int i = 0; i < iterations; i++){
         if(i%2==0){ //Forward propogation
@@ -72,7 +73,7 @@ bool Patchmatch::isValidPatch(const Image& image, int x, int y, int patchRadius)
 }
 
 void Patchmatch::initializeNNF(const Image& target, const Image& source,
-                    NNF& nnf, int patchRadius){
+                    NNF& nnf, int patchRadius, NNF* prevNNF){
 
     thread_local std::mt19937 localRng(std::random_device{}());
 
@@ -96,8 +97,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
-            // int sx;
-            // int sy;
+            int sx;
+            int sy;
             // do{
             //     //randomize sx to 0 to source.width
             //     sx = distX(localRng);
@@ -105,8 +106,16 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
             //     //randomize sy to 0 to source.height
             // }while(!isValidPatch(source, sx, sy, patchRadius));
 
-            int sx = distX(localRng);
-            int sy = distY(localRng);
+            if(prevNNF != nullptr){
+                // Use upsampled match from coarser level as starting point
+                Match prev = (*prevNNF)[y * target.width + x];
+                sx = std::clamp(prev.u, minX, maxX);
+                sy = std::clamp(prev.v, minY, maxY);
+            }
+            else{
+                sx = distX(localRng);
+                sy = distY(localRng);
+            }
 
             Match match;
             match.u = sx;
@@ -282,5 +291,29 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     bestMatch.v = bestY;
 
     nnf[y*target.width + x] = bestMatch;
+}
+
+
+NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
+                           int newWidth, int newHeight){
+    NNF upsampled(newWidth*newHeight);
+
+    for(int y = 0; y < newHeight; y++){
+        for(int x = 0; x < newWidth; x++){
+            int cx = std::clamp((int)(x * 0.85f), 0, oldWidth - 1);
+            int cy = std::clamp((int)(y * 0.85f), 0, oldHeight - 1);
+
+            Match match = nnf[cy * oldWidth + cx];
+
+            Match upscaleMatch;
+            upscaleMatch.u = (int)(match.u / 0.85f);
+            upscaleMatch.v = (int)(match.v / 0.85f);
+            upscaleMatch.dist = match.dist;
+
+            upsampled[y*newWidth + x] = upscaleMatch;
+        }
+    }
+
+    return upsampled;
 }
 

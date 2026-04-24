@@ -69,8 +69,8 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
 Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     std::cout<<"Processing frame"<<std::endl;
-    std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, 0.5f);
-    std::cout<<"Created frame pyramids"<<std::endl;
+    std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, FILTER_STRENGTH);
+    //std::cout<<"Created frame pyramids"<<std::endl;
 
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
@@ -84,7 +84,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     //        }
 
     Image s_deformed = deformImage(m_sourceTexture);
-    std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, 0.5f);
+    std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
     // std::cout<<"Created source pyramids"<<std::endl;
 
     // std::cout<<"Target image dimensions: "<<frame.width<<"x"<<frame.height<<std::endl;
@@ -94,6 +94,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     //     std::cout << "  framePyramid[" << i << "]: " << framePyramid[i].width << "x" << framePyramid[i].height << std::endl;
     // }
 
+    NNF prevNNF;
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
         QString outPath = QString("../color-me-noisy/debug_pyramid/framepyramid_level_%1.png").arg(level);
@@ -101,29 +102,34 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         Image cur_image = framePyramid[level];
         ImageUtils::writeImage(cur_image, outPath);
 
-        //Update this to be the correct texture
-        //std::cout<<"Current pyramid level "<<level<<std::endl;
-        //std::cout<<"Target level "<<level<<" dimensions: "<<cur_image.width<<"x"<<cur_image.height<<std::endl;
-
         Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
 
-        if (level == (int)framePyramid.size() - 1) {
-            // Coarsest level: no seed, just match directly
-            output_frame = patchmatch(cur_target, cur_source);
-        } else {
-            // Finer levels: upsample previous output to use as source seed
-            // Blend or directly use upsampled result as the source for this level
-            output_frame = patchmatch(output_frame, cur_source);
+        // if (level == (int)framePyramid.size() - 1) {
+        //     // Coarsest level: no seed, just match directly
+        //     output_frame = patchmatch(cur_target, cur_source);
+        // } else {
+        //     output_frame = patchmatch(output_frame, cur_source);
+        // }
+
+
+        NNF* seedNNF = nullptr;
+        NNF upscaled;
+        if (level < (int)framePyramid.size() - 1) {
+            upscaled = Patchmatch::upscaleNNF(prevNNF, framePyramid[level+1].width, framePyramid[level+1].height,
+                                              cur_target.width, cur_target.height);
+            seedNNF = &upscaled;
         }
 
+        prevNNF = Patchmatch::run_patchmatch(cur_target, cur_source, PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
+        output_frame = vote(cur_target, cur_source, prevNNF);
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
         ImageUtils::writeImage(output_frame, dbgPath);
 
-        if (level > 0) { //dont upsample at the last level
-            output_frame = ImagePyramid::upsample(output_frame);
-        }
+        // if (level > 0) { //dont upsample at the last level
+        //     output_frame = ImagePyramid::upsample(output_frame);
+        // }
     }
 
     return output_frame;

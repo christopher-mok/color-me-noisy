@@ -23,7 +23,7 @@ private:
     static void set_level(std::vector<Image>& pyramid, int level, const Image& image);
 
 
-    static Image blur(const Image& image);
+    static Image blur(const Image& image, float fStrenth);
     static float pixWeight(int xdiff, int ydiff, float sigma); // sigma = blur strength
     static Image downsample(const Image& image, float fStrength);
 

@@ -39,6 +39,7 @@ private:
     
     const int PATCH_RADIUS = 5;
     const int PATCHMATCH_ITERATIONS = 4;
+    const float FILTER_STRENGTH = 2.0;
 };
 
 #endif // CULT_H

@@ -22,7 +22,7 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
 }
 
 Image ImagePyramid::downsample(const Image& image, float fStrength){
-    Image blurred_image = blur(image);
+    Image blurred_image = blur(image, fStrength);
 //    Image blurred_image = image;
 
     //basically blurred[::2, ::2], or take every other pixel
@@ -219,8 +219,8 @@ std::vector<float> makeKernel1D(int radius, float sigma){
 
 }
 
-Image ImagePyramid::blur(const Image& image){
-    float sigma = 3.0f;
+Image ImagePyramid::blur(const Image& image, float fStrength){
+    float sigma = fStrength;
     int radius = 3.0f * sigma;
     int diam = radius*2+1;
 

@@ -19,8 +19,11 @@ public:
     static NNF run_patchmatch(const Image& target,
                               const Image& source,
                               int patchRadius,
-                              int iterations);
+                              int iterations, NNF* prevNNF = nullptr);
     static bool isValidPatch(const Image& image, int x, int y, int patchRadius);
+
+    static NNF upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
+                                        int newWidth, int newHeight);
 
 private:
     static std::mt19937 rng;
@@ -31,7 +34,7 @@ private:
     static void initializeNNF(const Image& target,
                               const Image& source,
                               NNF& nnf,
-                              int patchRadius);
+                              int patchRadius, NNF* prevNNF = nullptr);
     static void propogateForward(int x, int y,
                                  const Image& target,
                                  const Image& source,

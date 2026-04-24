@@ -19,7 +19,7 @@ public:
     ~MainWindow();
 
 private:
-    QString dirpath = "../color-me-noisy/frames";
+    QString dirpath = "../color-me-noisy/output_frames";
     // QString m_texturePath = "../color-me-noisy/textures/bunnie.jpg"; //Path to image texture
     QString m_texturePath = "../color-me-noisy/textures/S.png"; //Path to image texture
     QString m_videoPath = "../color-me-noisy/source_videos/walker.mov";

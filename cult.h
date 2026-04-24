@@ -33,6 +33,8 @@ private:
     void saveFrames(const QString &outputDir);
 
     Image deformImage(const Image& image);
+    Image arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPoints,
+                  std::vector<Eigen::Vector2f>& deformedPoints);
     Image patchmatch(const Image& target, const Image& source);
 
     Image vote(const Image& target, const Image& source, NNF& nnf);
@@ -40,6 +42,7 @@ private:
     const int PATCH_RADIUS = 5;
     const int PATCHMATCH_ITERATIONS = 4;
     const float FILTER_STRENGTH = 2.0;
+    const int GRID_SIZE = 50;
 };
 
 #endif // CULT_H

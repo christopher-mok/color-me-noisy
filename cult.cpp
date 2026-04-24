@@ -84,6 +84,9 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     //        }
 
     Image s_deformed = deformImage(m_sourceTexture);
+    QString deformed_outPath = QString("../color-me-noisy/debug_pyramid/source_deformed.png");
+    ImageUtils::writeImage(s_deformed, deformed_outPath);
+
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
     // std::cout<<"Created source pyramids"<<std::endl;
 
@@ -198,9 +201,10 @@ Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
 Image Cult::deformImage(const Image& image){
     int gridSize = 50; //make this class variable
 
-    std::mt19937 rng(std::random_device{}());
+    thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> angleDist(0.f, 2.f * M_PI);
-    std::uniform_real_distribution<float> magnitudeDist(15.f, 25.f);
+    // std::uniform_real_distribution<float> magnitudeDist(15.f, 25.f);
+    std::uniform_real_distribution<float> magnitudeDist(40.f, 60.f);
 
     std::vector<Eigen::Vector2f> originalPoints;
     std::vector<Eigen::Vector2f> deformedPoints;
@@ -221,7 +225,65 @@ Image Cult::deformImage(const Image& image){
 
     //still todo
 
-    return image;
+    return arapMLS(image, originalPoints, deformedPoints);
+}
+
+Image Cult::arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPoints,
+              std::vector<Eigen::Vector2f>& deformedPoints){
+    Image output = image;
+    output.pixels.reserve(image.width*image.height);
+
+    float alpha = 2.0f;
+
+    #pragma omp parallel for
+    for(int y = 0; y < image.height; y++){
+        for(int x = 0; x < image.width; x++){
+            Eigen::Vector2f v(x, y);
+
+            float weightSum = 0.f;
+            std::vector<float> weights;
+            for(int i = 0; i < originalPoints.size(); i++){
+                Eigen::Vector2f p = originalPoints[i];
+                float w = 1.f / (pow((p-v).norm(), 2.f*alpha));
+                weights.push_back(w);
+                weightSum += w;
+            }
+
+            Eigen::Vector2f p_star(0,0);
+            Eigen::Vector2f q_star(0,0);
+            for(int i = 0; i < originalPoints.size(); i++){
+                p_star += (weights[i] * originalPoints[i]) / weightSum;
+                q_star += (weights[i] * deformedPoints[i]) / weightSum;
+            }
+
+            std::vector<Eigen::Vector2f> centeredSources;
+            std::vector<Eigen::Vector2f> centeredTargets;
+            for(int i = 0; i < originalPoints.size(); i++){
+                Eigen::Vector2f p_hat = originalPoints[i] - p_star;
+                Eigen::Vector2f q_hat = deformedPoints[i] - p_star;
+
+                centeredSources.push_back(p_hat);
+                centeredTargets.push_back(q_hat);
+            }
+
+            Eigen::Matrix2f M = Eigen::Matrix2f::Zero();
+            for(int i = 0; i < originalPoints.size(); i++){
+                M += weights[i]*centeredSources[i]*centeredTargets[i].transpose();
+            }
+
+            Eigen::JacobiSVD<Eigen::Matrix2f> svd(M, Eigen::ComputeFullU | Eigen::ComputeFullV);
+            Eigen::Matrix2f R = svd.matrixU() * svd.matrixV().transpose();
+
+            Eigen::Vector2f deformed = R * (v - p_star)+q_star;
+
+            int sx = std::clamp((int)deformed.x(), 0, image.width - 1);
+            int sy = std::clamp((int)deformed.y(), 0, image.height - 1);
+            output.pixels[y * image.width + x] = ImageUtils::rgbAt(image, sx, sy);
+        }
+    }
+
+
+    return output;
 }
 
 void Cult::initFrames(const QStringList &framePaths) {

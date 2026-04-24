@@ -164,52 +164,103 @@ Image Cult::patchmatch(const Image& target, const Image& source){
     return output_image;
 }
 
-Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
+// Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
+//     Image processed_frame = target;
+//     std::vector<RGB> processed_pixels;
+//     //For each pixel
+//     const std::vector<RGB>& pixels = target.pixels;
+//     for(int i = 0; i < pixels.size(); i++){
+//         int x = i%target.width;
+//         int y = i/target.width;
+//         RGB accum;
+//         accum.r = 0,accum.g = 0, accum.b = 0;
+//         int count = 0;
+//         //For each pixel in the patch radius around iterated pixel
+//         for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+//             for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+//                 //Offset position
+//                 int px = x + dx;
+//                 int py = y + dy;
+
+//                 //patch validity check
+//                 if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
+//                     Match match = nnf[py*target.width + px];
+
+//                     //match to source
+//                     int sx = match.u - dx;
+//                     int sy = match.v - dy;
+
+//                     if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
+//                         RGB rgb = ImageUtils::rgbAt(source, sx, sy);
+//                         accum.r += rgb.r;
+//                         accum.g += rgb.g;
+//                         accum.b += rgb.b;
+//                         count++;
+//                     }
+
+//                 }
+//             }
+//         }
+//         RGB outRGB;
+//         if(count==0) std::cout<<"No matches found in voting";
+//         outRGB.r = accum.r/count;
+//         outRGB.g = accum.g/count;
+//         outRGB.b = accum.b/count;
+//         outRGB.a = 255;
+//         processed_pixels.push_back(outRGB);
+//     }
+//     processed_frame.pixels = processed_pixels;
+//     return processed_frame;
+// }
+
+Image Cult::vote(const Image& target, const Image& source, NNF& nnf) {
     Image processed_frame = target;
-    std::vector<RGB> processed_pixels;
-    //For each pixel
-    const std::vector<RGB>& pixels = target.pixels;
-    for(int i = 0; i < pixels.size(); i++){
-        int x = i%target.width;
-        int y = i/target.width;
-        RGB accum;
-        accum.r = 0,accum.g = 0, accum.b = 0;
-        int count = 0;
-        //For each pixel in the patch radius around iterated pixel
-        for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
-            for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
-                //Offset position
-                int px = x + dx;
-                int py = y + dy;
+    processed_frame.pixels.resize(target.width * target.height);
 
-                //patch validity check
-                if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
-                    Match match = nnf[py*target.width + px];
+    thread_local std::mt19937 rng(std::random_device{}());
 
-                    //match to source
+    for (int y = 0; y < target.height; y++) {
+        for (int x = 0; x < target.width; x++) {
+
+            std::vector<RGB> candidates;
+            candidates.reserve((2 * PATCH_RADIUS + 1) * (2 * PATCH_RADIUS + 1));
+
+            for (int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++) {
+                for (int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++) {
+                    int px = x + dx;
+                    int py = y + dy;
+
+                    if (!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS))
+                        continue;
+
+                    Match match = nnf[py * target.width + px];
+
+                    // If match.u/match.v is the center of the matched source patch,
+                    // then the source pixel corresponding to target pixel (x,y) is:
                     int sx = match.u - dx;
                     int sy = match.v - dy;
 
-                    if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
-                        RGB rgb = ImageUtils::rgbAt(source, sx, sy);
-                        accum.r += rgb.r;
-                        accum.g += rgb.g;
-                        accum.b += rgb.b;
-                        count++;
+                    if (sx >= 0 && sx < source.width &&
+                        sy >= 0 && sy < source.height) {
+                        candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
                     }
-
                 }
             }
+
+            RGB out;
+            if (!candidates.empty()) {
+                std::uniform_int_distribution<int> dist(0, candidates.size() - 1);
+                out = candidates[dist(rng)];
+                out.a = 255;
+            } else {
+                out = ImageUtils::rgbAt(target, x, y);
+                out.a = 255;
+            }
+
+            processed_frame.pixels[y * target.width + x] = out;
         }
-        RGB outRGB;
-        if(count==0) std::cout<<"No matches found in voting";
-        outRGB.r = accum.r/count;
-        outRGB.g = accum.g/count;
-        outRGB.b = accum.b/count;
-        outRGB.a = 255;
-        processed_pixels.push_back(outRGB);
     }
-    processed_frame.pixels = processed_pixels;
+
     return processed_frame;
 }
 

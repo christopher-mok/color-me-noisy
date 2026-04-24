@@ -39,9 +39,9 @@ private:
 
     Image vote(const Image& target, const Image& source, NNF& nnf);
     
-    const int PATCH_RADIUS = 5;
+    const int PATCH_RADIUS = 3;
     const int PATCHMATCH_ITERATIONS = 4;
-    const float FILTER_STRENGTH = 2.0;
+    const float FILTER_STRENGTH = 3;
     const int GRID_SIZE = 50;
 };
 

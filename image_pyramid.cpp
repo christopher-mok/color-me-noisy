@@ -8,7 +8,7 @@ std::vector<Image> ImagePyramid::make_gaussian_pyramid(Image image, float filter
     //Do we determine num levels in here or explicitly in cult?
 //    int numLevels = num_levels(image, filterStrength);
 
-    int numLevels = 3;
+    int numLevels = num_levels(image, filterStrength);
     
     for(int i = 0; i < numLevels; i++){
         //get filter strength at level by calling that func? then can pass a filter strenhgth

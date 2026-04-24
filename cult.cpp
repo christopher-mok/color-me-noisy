@@ -72,6 +72,20 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, FILTER_STRENGTH);
     //std::cout<<"Created frame pyramids"<<std::endl;
 
+
+
+    // Initialize coarsest target level with low-pass filtered reference
+    Image coarsestTarget = framePyramid.back();  // coarsest level
+    // Replace with low-pass filtered version of the reference frame
+    Image filteredRef = ImagePyramid::blur(frame, FILTER_STRENGTH);
+    // Downsample to match coarsest pyramid level dimensions
+    while(filteredRef.width > coarsestTarget.width || filteredRef.height > coarsestTarget.height){
+        filteredRef = ImagePyramid::downsample(filteredRef, FILTER_STRENGTH);
+    }
+    framePyramid.back() = filteredRef;
+
+
+
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
     //        //MAIN LOOP
@@ -86,6 +100,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     Image s_deformed = deformImage(m_sourceTexture);
     QString deformed_outPath = QString("../color-me-noisy/debug_pyramid/source_deformed.png");
     ImageUtils::writeImage(s_deformed, deformed_outPath);
+    std::cout<<"Deformed source texture"<<std::endl;
 
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
     // std::cout<<"Created source pyramids"<<std::endl;
@@ -228,12 +243,13 @@ Image Cult::deformImage(const Image& image){
     return arapMLS(image, originalPoints, deformedPoints);
 }
 
-Image Cult::arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPoints,
-              std::vector<Eigen::Vector2f>& deformedPoints){
+//Note: switch the order of deformed and original points to get swirls or boxes
+Image Cult::arapMLS(const Image& image, std::vector<Eigen::Vector2f>& deformedPoints,
+              std::vector<Eigen::Vector2f>& originalPoints){
     Image output = image;
     output.pixels.reserve(image.width*image.height);
 
-    float alpha = 2.0f;
+    float alpha = 1.0f;
 
     #pragma omp parallel for
     for(int y = 0; y < image.height; y++){
@@ -244,7 +260,8 @@ Image Cult::arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPo
             std::vector<float> weights;
             for(int i = 0; i < originalPoints.size(); i++){
                 Eigen::Vector2f p = originalPoints[i];
-                float w = 1.f / (pow((p-v).norm(), 2.f*alpha));
+                float dist2 = std::max((p - v).squaredNorm(), 1e-6f);
+                float w = 1.f / (pow(dist2, alpha));
                 weights.push_back(w);
                 weightSum += w;
             }
@@ -260,7 +277,7 @@ Image Cult::arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPo
             std::vector<Eigen::Vector2f> centeredTargets;
             for(int i = 0; i < originalPoints.size(); i++){
                 Eigen::Vector2f p_hat = originalPoints[i] - p_star;
-                Eigen::Vector2f q_hat = deformedPoints[i] - p_star;
+                Eigen::Vector2f q_hat = deformedPoints[i] - q_star;
 
                 centeredSources.push_back(p_hat);
                 centeredTargets.push_back(q_hat);

@@ -1,6 +1,7 @@
 #ifndef PATCHMATCH_H
 #define PATCHMATCH_H
 
+#include <vector>
 #include "image_utils.h"
 #include <random>
 
@@ -10,7 +11,7 @@ struct Match{
     float dist;
 };
 
-using NNF = std::vector<std::vector<Match>>;
+using NNF = std::vector<Match>;
 
 class Patchmatch
 {
@@ -46,6 +47,7 @@ private:
                              const Image& source,
                              NNF& nnf,
                              int patchRadius);
+
 };
 
 #endif // PATCHMATCH_H

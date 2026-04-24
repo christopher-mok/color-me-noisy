@@ -2,6 +2,7 @@
 #define CULT_H
 
 #include <iostream>
+#include <vector>
 #include <QStringList>
 #include "Eigen/Core"
 #include "Eigen/Eigen"
@@ -11,7 +12,7 @@
 #include "patchmatch.h"
 #include "image_pyramid.h"
 
-using NNF = std::vector<std::vector<Match>>;
+using NNF = std::vector<Match>;
 
 class Cult
 {

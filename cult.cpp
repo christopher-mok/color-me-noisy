@@ -28,6 +28,10 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
     // Image cur_frame = ImageUtils::readImage(framePaths[0], true);
     // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
     std::cout<<"Beginning frame processing"<<std::endl;
+
+    m_outputFrames.resize(m_frames.size());
+
+    #pragma omp parallel for
     for(int i = 0; i < m_frames.size(); i++){
 
         // //old test frames
@@ -35,7 +39,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
         // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
         Image output_frame = processFrame(m_frames[i], prevOutput);
 
-        m_outputFrames.push_back(output_frame);
+        m_outputFrames[i] = output_frame;
         std::cout<<"Processed frame #"<<i<<std::endl;
     }
 
@@ -81,14 +85,14 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     Image s_deformed = deformImage(m_sourceTexture);
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, 0.5f);
-    std::cout<<"Created source pyramids"<<std::endl;
+    // std::cout<<"Created source pyramids"<<std::endl;
 
-    std::cout<<"Target image dimensions: "<<frame.width<<"x"<<frame.height<<std::endl;
+    // std::cout<<"Target image dimensions: "<<frame.width<<"x"<<frame.height<<std::endl;
 
-    std::cout << "Frame pyramid levels: " << framePyramid.size() << std::endl;
-    for (int i = 0; i < framePyramid.size(); i++) {
-        std::cout << "  framePyramid[" << i << "]: " << framePyramid[i].width << "x" << framePyramid[i].height << std::endl;
-    }
+    // std::cout << "Frame pyramid levels: " << framePyramid.size() << std::endl;
+    // for (int i = 0; i < framePyramid.size(); i++) {
+    //     std::cout << "  framePyramid[" << i << "]: " << framePyramid[i].width << "x" << framePyramid[i].height << std::endl;
+    // }
 
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
@@ -98,8 +102,8 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         ImageUtils::writeImage(cur_image, outPath);
 
         //Update this to be the correct texture
-        std::cout<<"Current pyramid level "<<level<<std::endl;
-        std::cout<<"Target level "<<level<<" dimensions: "<<cur_image.width<<"x"<<cur_image.height<<std::endl;
+        //std::cout<<"Current pyramid level "<<level<<std::endl;
+        //std::cout<<"Target level "<<level<<" dimensions: "<<cur_image.width<<"x"<<cur_image.height<<std::endl;
 
         Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
@@ -129,14 +133,14 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 Image Cult::patchmatch(const Image& target, const Image& source){
     Image output_image;
 
-    std::cout<<"Running Patchmatch"<<std::endl;
+    //std::cout<<"Running Patchmatch"<<std::endl;
     NNF nnf = Patchmatch::run_patchmatch(target, source, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
     output_image = vote(target, source, nnf);
-    std::cout<<"Finished Patchmatch and Voting"<<std::endl;
+    //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;
 }
 
-Image Cult::vote(const Image& target, const Image& source, std::vector<std::vector<Match>>& nnf){
+Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
     Image processed_frame = target;
     std::vector<RGB> processed_pixels;
     //For each pixel
@@ -156,7 +160,7 @@ Image Cult::vote(const Image& target, const Image& source, std::vector<std::vect
 
                 //patch validity check
                 if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
-                    Match match = nnf[px][py];
+                    Match match = nnf[py*target.width + px];
 
                     //match to source
                     int sx = match.u - dx;

@@ -35,7 +35,7 @@ NNF Patchmatch::run_patchmatch(const Image& target,
             }
         }
 
-        std::cout<<"Iteration "<<i<<" done"<<std::endl;
+        // std::cout<<"Iteration "<<i<<" done"<<std::endl;
     }
 
     return nnf;
@@ -74,32 +74,55 @@ bool Patchmatch::isValidPatch(const Image& image, int x, int y, int patchRadius)
 void Patchmatch::initializeNNF(const Image& target, const Image& source,
                     NNF& nnf, int patchRadius){
 
-    std::uniform_int_distribution<int> distX(0, source.width - 1);
-    std::uniform_int_distribution<int> distY(0, source.height - 1);
+    thread_local std::mt19937 localRng(std::random_device{}());
 
-    nnf.resize(target.width, std::vector<Match>(target.height));
+
+
+    nnf.resize(target.width*target.height);
+
+
+    int minX = patchRadius;
+    int maxX = source.width - 1 - patchRadius;
+    int minY = patchRadius;
+    int maxY = source.height - 1 - patchRadius;
+
+    if(maxX < minX || maxY < minY){
+        std::cerr << "Source image too small for patch radius " << patchRadius << std::endl;
+        return;
+    }
+
+    std::uniform_int_distribution<int> distX(minX, maxX);
+    std::uniform_int_distribution<int> distY(minY, maxY);
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
-            int sx;
-            int sy;
-            do{
-                //randomize sx to 0 to source.width
-                sx = distX(rng);
-                sy = distY(rng);
-                //randomize sy to 0 to source.height
-            }while(!isValidPatch(source, sx, sy, patchRadius));
+            // int sx;
+            // int sy;
+            // do{
+            //     //randomize sx to 0 to source.width
+            //     sx = distX(localRng);
+            //     sy = distY(localRng);
+            //     //randomize sy to 0 to source.height
+            // }while(!isValidPatch(source, sx, sy, patchRadius));
+
+            int sx = distX(localRng);
+            int sy = distY(localRng);
 
             Match match;
             match.u = sx;
             match.v = sy;
-            match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+            match.dist = std::numeric_limits<float>::max();
 
-            nnf[x][y] = match;
+            //match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+            if(isValidPatch(target, x, y, patchRadius)){
+                match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+            }
+
+            nnf[y*target.width + x] = match;
         }
     }
 
-    std::cout<<"NNF initialized"<<std::endl;
+    // std::cout<<"NNF initialized"<<std::endl;
 }
 
 //For neighbors left and above
@@ -114,37 +137,43 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
 
 
     // candidate 1
-    Match current = nnf[x][y];
+    if (!isValidPatch(target, x, y, patchRadius)) return;
+
+    Match current = nnf[y*target.width + x];
 
     // candidate 2
     if(isValidPatch(target, x-1, y, patchRadius)){
-        Match left = nnf[x-1][y];
+        Match left = nnf[y*target.width + x-1];
         int cx = left.u + 1;
         int cy = left.v;
         float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
-
-        if(isValidPatch(source, cx, cy, patchRadius) && c_dist < current.dist){
-            current.dist = c_dist;
-            current.u = cx;
-            current.v = cy;
+        if(isValidPatch(source, cx, cy, patchRadius)){
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            if(c_dist < current.dist){
+                current.dist = c_dist;
+                current.u = cx;
+                current.v = cy;
+            }
         }
     }
 
     // candidate 3
     if(isValidPatch(target, x, y-1, patchRadius)){
-        Match left = nnf[x][y-1];
+        Match left = nnf[(y-1)*target.width + x];
         int cx = left.u;
         int cy = left.v + 1;
-        float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
 
-        if(isValidPatch(source, cx, cy, patchRadius) && c_dist < current.dist){
-            current.dist = c_dist;
-            current.u = cx;
-            current.v = cy;
+        if(isValidPatch(source, cx, cy, patchRadius)){
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            if(c_dist < current.dist){
+                current.dist = c_dist;
+                current.u = cx;
+                current.v = cy;
+            }
         }
     }
 
-    nnf[x][y] = current;
+    nnf[y*target.width + x] = current;
 }
 
 //for neighbors right and below
@@ -156,47 +185,48 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
         //candidate 2: nnf[x+1, y] - (1, 0)
         //candidate 3: nnf[x, y+1] - (0, 1)
     //set nnf[x,y] to candidate with lowest patchDistance
+     if (!isValidPatch(target, x, y, patchRadius)) return;
 
     // candidate 1:
-    Match curr = nnf[x][y];
+    Match curr = nnf[y*target.width + x];
 
     // candidate 2:
     if (isValidPatch(target, x+1, y, patchRadius)){
 
-        Match neigh = nnf[x+1][y];
-        int sx = neigh.u-1;
-        int sy = neigh.v;
-        float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+        Match neigh = nnf[y*target.width + x+1];
+        int cx = neigh.u-1;
+        int cy = neigh.v;
+        //float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
 
-        bool neighValid = isValidPatch(source, sx, sy, patchRadius);
-        if (dist < curr.dist && neighValid){
-            Match newMatch;
-            newMatch.u = sx;
-            newMatch.v = sy;
-            newMatch.dist = dist;
-            curr = newMatch;
+        //bool neighValid = isValidPatch(source, cx, cy, patchRadius);
+        if(isValidPatch(source, cx, cy, patchRadius)){
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            if(c_dist < curr.dist){
+                curr.dist = c_dist;
+                curr.u = cx;
+                curr.v = cy;
+            }
         }
     }
 
     // candidate 3:
     if (isValidPatch(target, x, y+1, patchRadius)){
 
-        Match neigh = nnf[x][y+1];
-        int sx = neigh.u;
-        int sy = neigh.v-1;
-        float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
+        Match neigh = nnf[(y+1)*target.width + x];
+        int cx = neigh.u;
+        int cy = neigh.v-1;
 
-        bool neighValid = isValidPatch(source, sx, sy, patchRadius);
-        if (dist < curr.dist && neighValid){
-            Match newMatch;
-            newMatch.u = sx;
-            newMatch.v = sy;
-            newMatch.dist = dist;
-            curr = newMatch;
+        if(isValidPatch(source, cx, cy, patchRadius)){  // ← check first
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            if(c_dist < curr.dist){
+                curr.dist = c_dist;
+                curr.u = cx;
+                curr.v = cy;
+            }
         }
     }
 
-    nnf[x][y] = curr;
+    nnf[y*target.width + x] = curr;
 
 
 
@@ -206,11 +236,15 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
                   NNF& nnf, int patchRadius){
     //init sx and sy to nnf[x,y], this is current best
 
-    Match bestMatch = nnf[x][y];
+    if(!isValidPatch(target, x, y, patchRadius)) return;
+
+    Match bestMatch = nnf[y*target.width + x];
     int sx = bestMatch.u;
     int sy = bestMatch.v;
     //initialize search radius
     int radius = std::max(source.width, source.height);
+
+    thread_local std::mt19937 localRng(std::random_device{}());
 
     std::uniform_real_distribution<float> distX(-1.f, 1.f);
     std::uniform_real_distribution<float> distY(-1.f, 1.f);
@@ -223,13 +257,13 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     while(radius > 1){
         int cx, cy;
         //randomly sample in search radius around current best
-        do{
-            cx = std::clamp(sx + (int)(distX(rng)*((float)radius)), 0, source.width);
-            cy = std::clamp(sy + (int)(distY(rng)*((float)radius)), 0, source.height);
-        }while(!isValidPatch(source, cx, cy, patchRadius));
+        // do{
+        //     cx = std::clamp(sx + (int)(distX(localRng)*((float)radius)), 0, source.width);
+        //     cy = std::clamp(sy + (int)(distY(localRng)*((float)radius)), 0, source.height);
+        // }while(!isValidPatch(source, cx, cy, patchRadius));
 
-        // cx = std::clamp(sx + (int)(distX(rng)*radius), patchRadius, source.width-1-patchRadius);
-        // cy = std::clamp(sy + (int)(distY(rng)*radius), patchRadius, source.height-1-patchRadius);
+        cx = std::clamp(sx + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
+        cy = std::clamp(sy + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
         //if valid, check if patchdist of new sample < best sample
         float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
         if(c_distance < bestDist){
@@ -247,6 +281,6 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     bestMatch.u = bestX;
     bestMatch.v = bestY;
 
-    nnf[x][y] = bestMatch;
+    nnf[y*target.width + x] = bestMatch;
 }
 

@@ -89,6 +89,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
 
 
+    Image currentResult = framePyramid.back();
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
     //        //MAIN LOOP
@@ -130,8 +131,11 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         Image cur_image = framePyramid[level];
         ImageUtils::writeImage(cur_image, outPath);
 
-        Image& cur_target = framePyramid[level];
+//        Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
+        if (level < (int)framePyramid.size() - 1) {
+            currentResult = ImagePyramid::upsample(currentResult);
+        }
 
         // if (level == (int)framePyramid.size() - 1) {
         //     // Coarsest level: no seed, just match directly
@@ -145,12 +149,13 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         NNF upscaled;
         if (level < (int)framePyramid.size() - 1) {
             upscaled = Patchmatch::upscaleNNF(prevNNF, framePyramid[level+1].width, framePyramid[level+1].height,
-                                              cur_target.width, cur_target.height);
+                                              currentResult.width, currentResult.height);
             seedNNF = &upscaled;
         }
 
-        prevNNF = Patchmatch::run_patchmatch(cur_target, cur_source, PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
-        output_frame = vote(cur_target, cur_source, prevNNF);
+        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
+        output_frame = vote(currentResult, cur_source, prevNNF);
+        currentResult = output_frame;
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
         ImageUtils::writeImage(output_frame, dbgPath);

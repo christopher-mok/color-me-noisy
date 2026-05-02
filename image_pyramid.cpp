@@ -154,7 +154,10 @@ int ImagePyramid::num_levels(const Image& image, float f){
 
 //Interpolates filter strength across levels
 float ImagePyramid::filter_strength_at_level(float f, int level, int totalLevels){
-    return f * std::pow(1.f/f, level / (totalLevels-1));
+    if (totalLevels <= 1) return f;
+
+    float t = float(level) / float(totalLevels - 1);
+    return f * std::pow(1.f / f, t);
 }
 
 //Set pyramid level for coarse consistency and upsampling

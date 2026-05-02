@@ -31,7 +31,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
     m_outputFrames.resize(m_frames.size());
 
-    #pragma omp parallel for
+    //#pragma omp parallel for
     for(int i = 0; i < m_frames.size(); i++){
 
         // //old test frames
@@ -74,15 +74,15 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
 
 
-    // Initialize coarsest target level with low-pass filtered reference
-    Image coarsestTarget = framePyramid.back();  // coarsest level
-    // Replace with low-pass filtered version of the reference frame
-    Image filteredRef = ImagePyramid::blur(frame, FILTER_STRENGTH);
-    // Downsample to match coarsest pyramid level dimensions
-    while(filteredRef.width > coarsestTarget.width || filteredRef.height > coarsestTarget.height){
-        filteredRef = ImagePyramid::downsample(filteredRef, FILTER_STRENGTH);
-    }
-    framePyramid.back() = filteredRef;
+    // // Initialize coarsest target level with low-pass filtered reference
+    // Image coarsestTarget = framePyramid.back();  // coarsest level
+    // // Replace with low-pass filtered version of the reference frame
+    // Image filteredRef = ImagePyramid::blur(frame, FILTER_STRENGTH);
+    // // Downsample to match coarsest pyramid level dimensions
+    // while(filteredRef.width > coarsestTarget.width || filteredRef.height > coarsestTarget.height){
+    //     filteredRef = ImagePyramid::downsample(filteredRef, FILTER_STRENGTH);
+    // }
+    // framePyramid.back() = filteredRef;
 
 
 
@@ -105,6 +105,12 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
     // std::cout<<"Created source pyramids"<<std::endl;
 
+    for(int i = 0; i < sourcePyramid.size(); i++){
+        Image cur_image = sourcePyramid[i];
+        QString outPath = QString("../color-me-noisy/debug_pyramid/texpyramid_level_%1.png").arg(i);
+        ImageUtils::writeImage(cur_image, outPath);
+    }
+
     // std::cout<<"Target image dimensions: "<<frame.width<<"x"<<frame.height<<std::endl;
 
     // std::cout << "Frame pyramid levels: " << framePyramid.size() << std::endl;
@@ -112,6 +118,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     //     std::cout << "  framePyramid[" << i << "]: " << framePyramid[i].width << "x" << framePyramid[i].height << std::endl;
     // }
 
+    //Original
     NNF prevNNF;
     for (int level = framePyramid.size() - 1; level >= 0; level--) {
         // deform, patch-match, upsample output to seed next level
@@ -152,6 +159,51 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     return output_frame;
 
+
+
+    // Image current = framePyramid.back();  // coarsest low-pass reference
+    // NNF prevNNF;
+
+    // for (int level = framePyramid.size() - 1; level >= 0; --level) {
+    //     Image& cur_source = sourcePyramid[level];
+
+    //     NNF* seedNNF = nullptr;
+    //     NNF upscaled;
+    //     if (level < (int)framePyramid.size() - 1) {
+    //         upscaled = Patchmatch::upscaleNNF(
+    //             prevNNF,
+    //             framePyramid[level + 1].width,
+    //             framePyramid[level + 1].height,
+    //             current.width,
+    //             current.height
+    //             );
+    //         seedNNF = &upscaled;
+    //     }
+
+    //     for (int iter = 0; iter < WEXLER_ITERS; ++iter) {
+    //         prevNNF = Patchmatch::run_patchmatch(
+    //             current,
+    //             cur_source,
+    //             PATCH_RADIUS,
+    //             PATCHMATCH_ITERATIONS,
+    //             seedNNF
+    //             );
+
+    //         current = vote(current, cur_source, prevNNF);
+
+    //         // After first iteration, use current NNF normally
+    //         seedNNF = nullptr;
+    //     }
+
+    //     if(level > 0){
+    //         current = ImagePyramid::upsample(current);
+    //     }
+
+    //     QString dbgPath = QString("../color-me-noisy/debug_pyramid/ouput_level_%1.png").arg(level);
+    //     ImageUtils::writeImage(current, dbgPath);
+    // }
+
+    // return current;
 }
 
 Image Cult::patchmatch(const Image& target, const Image& source){
@@ -164,105 +216,142 @@ Image Cult::patchmatch(const Image& target, const Image& source){
     return output_image;
 }
 
-// Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
-//     Image processed_frame = target;
-//     std::vector<RGB> processed_pixels;
-//     //For each pixel
-//     const std::vector<RGB>& pixels = target.pixels;
-//     for(int i = 0; i < pixels.size(); i++){
-//         int x = i%target.width;
-//         int y = i/target.width;
-//         RGB accum;
-//         accum.r = 0,accum.g = 0, accum.b = 0;
-//         int count = 0;
-//         //For each pixel in the patch radius around iterated pixel
-//         for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
-//             for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
-//                 //Offset position
-//                 int px = x + dx;
-//                 int py = y + dy;
-
-//                 //patch validity check
-//                 if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
-//                     Match match = nnf[py*target.width + px];
-
-//                     //match to source
-//                     int sx = match.u - dx;
-//                     int sy = match.v - dy;
-
-//                     if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
-//                         RGB rgb = ImageUtils::rgbAt(source, sx, sy);
-//                         accum.r += rgb.r;
-//                         accum.g += rgb.g;
-//                         accum.b += rgb.b;
-//                         count++;
-//                     }
-
-//                 }
-//             }
-//         }
-//         RGB outRGB;
-//         if(count==0) std::cout<<"No matches found in voting";
-//         outRGB.r = accum.r/count;
-//         outRGB.g = accum.g/count;
-//         outRGB.b = accum.b/count;
-//         outRGB.a = 255;
-//         processed_pixels.push_back(outRGB);
-//     }
-//     processed_frame.pixels = processed_pixels;
-//     return processed_frame;
-// }
-
-Image Cult::vote(const Image& target, const Image& source, NNF& nnf) {
+Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
     Image processed_frame = target;
-    processed_frame.pixels.resize(target.width * target.height);
+    std::vector<RGB> processed_pixels;
+    //For each pixel
+    const std::vector<RGB>& pixels = target.pixels;
+    for(int i = 0; i < pixels.size(); i++){
+        int x = i%target.width;
+        int y = i/target.width;
+        RGB accum;
+        accum.r = 0,accum.g = 0, accum.b = 0;
+        int count = 0;
+        //For each pixel in the patch radius around iterated pixel
+        for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+            for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+                //Offset position
+                int px = x + dx;
+                int py = y + dy;
 
-    thread_local std::mt19937 rng(std::random_device{}());
+                //patch validity check
+                if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
+                    Match match = nnf[py*target.width + px];
 
-    for (int y = 0; y < target.height; y++) {
-        for (int x = 0; x < target.width; x++) {
-
-            std::vector<RGB> candidates;
-            candidates.reserve((2 * PATCH_RADIUS + 1) * (2 * PATCH_RADIUS + 1));
-
-            for (int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++) {
-                for (int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++) {
-                    int px = x + dx;
-                    int py = y + dy;
-
-                    if (!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS))
-                        continue;
-
-                    Match match = nnf[py * target.width + px];
-
-                    // If match.u/match.v is the center of the matched source patch,
-                    // then the source pixel corresponding to target pixel (x,y) is:
+                    //match to source
                     int sx = match.u - dx;
                     int sy = match.v - dy;
 
-                    if (sx >= 0 && sx < source.width &&
-                        sy >= 0 && sy < source.height) {
-                        candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
+                    if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
+                        RGB rgb = ImageUtils::rgbAt(source, sx, sy);
+                        accum.r += rgb.r;
+                        accum.g += rgb.g;
+                        accum.b += rgb.b;
+                        count++;
                     }
+
                 }
             }
+        }
+        RGB outRGB;
+        if(count==0) std::cout<<"No matches found in voting";
+        outRGB.r = accum.r/count;
+        outRGB.g = accum.g/count;
+        outRGB.b = accum.b/count;
+        outRGB.a = 255;
+        processed_pixels.push_back(outRGB);
+    }
+    processed_frame.pixels = processed_pixels;
+    return processed_frame;
+}
 
-            RGB out;
-            if (!candidates.empty()) {
-                std::uniform_int_distribution<int> dist(0, candidates.size() - 1);
-                out = candidates[dist(rng)];
-                out.a = 255;
-            } else {
-                out = ImageUtils::rgbAt(target, x, y);
-                out.a = 255;
-            }
+RGB modeVote(const std::vector<RGB>& votes) {
+    struct Bucket {
+        int count = 0;
+        float r = 0, g = 0, b = 0;
+    };
 
-            processed_frame.pixels[y * target.width + x] = out;
+    std::unordered_map<int, Bucket> hist;
+
+    for (const RGB& c : votes) {
+        int r = std::clamp((int)std::round(c.r), 0, 255);
+        int g = std::clamp((int)std::round(c.g), 0, 255);
+        int b = std::clamp((int)std::round(c.b), 0, 255);
+
+        // 5 bits per channel: 32x32x32 color bins
+        int rq = r >> 3;
+        int gq = g >> 3;
+        int bq = b >> 3;
+        int key = (rq << 10) | (gq << 5) | bq;
+
+        auto& bucket = hist[key];
+        bucket.count++;
+        bucket.r += c.r;
+        bucket.g += c.g;
+        bucket.b += c.b;
+    }
+
+    int bestKey = -1;
+    int bestCount = -1;
+
+    for (const auto& [key, bucket] : hist) {
+        if (bucket.count > bestCount) {
+            bestCount = bucket.count;
+            bestKey = key;
         }
     }
 
-    return processed_frame;
+    const Bucket& best = hist[bestKey];
+
+    RGB out;
+    out.r = best.r / best.count;
+    out.g = best.g / best.count;
+    out.b = best.b / best.count;
+    out.a = 255;
+    return out;
 }
+
+//mode vote
+// Image Cult::vote(const Image& target, const Image& source, NNF& nnf) {
+//     Image processed = target;
+//     processed.pixels.resize(target.width * target.height);
+
+//     for (int y = 0; y < target.height; y++) {
+//         for (int x = 0; x < target.width; x++) {
+//             std::vector<RGB> votes;
+
+//             for (int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++) {
+//                 for (int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++) {
+//                     int px = x + dx;
+//                     int py = y + dy;
+
+//                     if (!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)) {
+//                         continue;
+//                     }
+
+//                     Match m = nnf[py * target.width + px];
+
+//                     int sx = m.u - dx;
+//                     int sy = m.v - dy;
+
+//                     if (sx < 0 || sx >= source.width || sy < 0 || sy >= source.height) {
+//                         continue;
+//                     }
+
+//                     votes.push_back(ImageUtils::rgbAt(source, sx, sy));
+//                 }
+//             }
+
+//             if (!votes.empty()) {
+//                 processed.pixels[y * target.width + x] = modeVote(votes);
+//             } else {
+//                 processed.pixels[y * target.width + x] = ImageUtils::rgbAt(target, x, y);
+//             }
+//         }
+//     }
+
+//     return processed;
+// }
 
 Image Cult::deformImage(const Image& image){
     int gridSize = 50; //make this class variable

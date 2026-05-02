@@ -61,7 +61,7 @@ float Patchmatch::patchDistance(const Image& target, int tx, int ty,
             float db = target_rgb.b - source_rgb.b;
 
             //dist += dr*dr + dg*dg + db*db;
-            dist += abs(dr) + abs(dg) + abs(db);
+            dist += std::abs(dr) + std::abs(dg) + std::abs(db);
         }
     }
 

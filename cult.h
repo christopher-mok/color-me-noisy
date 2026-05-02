@@ -38,6 +38,7 @@ private:
     Image patchmatch(const Image& target, const Image& source);
 
     Image vote(const Image& target, const Image& source, NNF& nnf);
+    RGB modeVote(const std::vector<RGB>& votes);
     
     const int PATCH_RADIUS = 8;
     const int PATCHMATCH_ITERATIONS = 4;

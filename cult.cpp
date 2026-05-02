@@ -5,6 +5,8 @@
 #include <omp.h>
 
 
+
+
 Cult::Cult() {
 }
 
@@ -41,6 +43,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
         m_outputFrames[i] = output_frame;
         std::cout<<"Processed frame #"<<i<<std::endl;
+        break; // <----- KEEP TO PRINT 1 FRAME
     }
 
 //    Image prevOutput;
@@ -217,55 +220,93 @@ Image Cult::patchmatch(const Image& target, const Image& source){
 }
 
 Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
-    Image processed_frame = target;
-    std::vector<RGB> processed_pixels;
-    //For each pixel
-    const std::vector<RGB>& pixels = target.pixels;
-    for(int i = 0; i < pixels.size(); i++){
-        int x = i%target.width;
-        int y = i/target.width;
-        RGB accum;
-        accum.r = 0,accum.g = 0, accum.b = 0;
-        int count = 0;
-        //For each pixel in the patch radius around iterated pixel
-        for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
-            for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
-                //Offset position
-                int px = x + dx;
-                int py = y + dy;
 
-                //patch validity check
-                if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
+
+    Image processed_frame = target;
+    processed_frame.pixels.resize(target.width * target.height);
+
+    for(int y = 0; y < target.height; y++){
+        for(int x = 0; x < target.width; x++){
+            std::vector<RGB> candidates;
+
+            for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+                for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+                    int px = x + dx;
+                    int py = y + dy;
+
+                    if(!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS))
+                        continue;
+
                     Match match = nnf[py*target.width + px];
 
-                    //match to source
                     int sx = match.u - dx;
                     int sy = match.v - dy;
 
-                    if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
-                        RGB rgb = ImageUtils::rgbAt(source, sx, sy);
-                        accum.r += rgb.r;
-                        accum.g += rgb.g;
-                        accum.b += rgb.b;
-                        count++;
+                    if(sx >= 0 && sx < source.width && sy >= 0 && sy < source.height){
+                        candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
                     }
-
                 }
             }
+
+            if(!candidates.empty()){
+                processed_frame.pixels[y * target.width + x] = modeVote(candidates);
+            } else {
+                processed_frame.pixels[y * target.width + x] = ImageUtils::rgbAt(target, x, y);
+            }
         }
-        RGB outRGB;
-        if(count==0) std::cout<<"No matches found in voting";
-        outRGB.r = accum.r/count;
-        outRGB.g = accum.g/count;
-        outRGB.b = accum.b/count;
-        outRGB.a = 255;
-        processed_pixels.push_back(outRGB);
     }
-    processed_frame.pixels = processed_pixels;
+
     return processed_frame;
+
+    // Image processed_frame = target;
+    // std::vector<RGB> processed_pixels;
+    // //For each pixel
+    // const std::vector<RGB>& pixels = target.pixels;
+    // for(int i = 0; i < pixels.size(); i++){
+    //     int x = i%target.width;
+    //     int y = i/target.width;
+    //     RGB accum;
+    //     accum.r = 0,accum.g = 0, accum.b = 0;
+    //     int count = 0;
+    //     //For each pixel in the patch radius around iterated pixel
+    //     for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+    //         for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+    //             //Offset position
+    //             int px = x + dx;
+    //             int py = y + dy;
+
+    //             //patch validity check
+    //             if(Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)){
+    //                 Match match = nnf[py*target.width + px];
+
+    //                 //match to source
+    //                 int sx = match.u - dx;
+    //                 int sy = match.v - dy;
+
+    //                 if(sx>=0 && sx < source.width && sy>=0 && sy<source.height){
+    //                     RGB rgb = ImageUtils::rgbAt(source, sx, sy);
+    //                     accum.r += rgb.r;
+    //                     accum.g += rgb.g;
+    //                     accum.b += rgb.b;
+    //                     count++;
+    //                 }
+
+    //             }
+    //         }
+    //     }
+    //     RGB outRGB;
+    //     if(count==0) std::cout<<"No matches found in voting";
+    //     outRGB.r = accum.r/count;
+    //     outRGB.g = accum.g/count;
+    //     outRGB.b = accum.b/count;
+    //     outRGB.a = 255;
+    //     processed_pixels.push_back(outRGB);
+    // }
+    // processed_frame.pixels = processed_pixels;
+    // return processed_frame;
 }
 
-RGB modeVote(const std::vector<RGB>& votes) {
+RGB Cult::modeVote(const std::vector<RGB>& votes) {
     struct Bucket {
         int count = 0;
         float r = 0, g = 0, b = 0;
@@ -274,9 +315,9 @@ RGB modeVote(const std::vector<RGB>& votes) {
     std::unordered_map<int, Bucket> hist;
 
     for (const RGB& c : votes) {
-        int r = std::clamp((int)std::round(c.r), 0, 255);
-        int g = std::clamp((int)std::round(c.g), 0, 255);
-        int b = std::clamp((int)std::round(c.b), 0, 255);
+        int r = std::clamp((int)std::round(c.r * 255.f), 0, 255);
+        int g = std::clamp((int)std::round(c.g * 255.f), 0, 255);
+        int b = std::clamp((int)std::round(c.b * 255.f), 0, 255);
 
         // 5 bits per channel: 32x32x32 color bins
         int rq = r >> 3;
@@ -309,6 +350,7 @@ RGB modeVote(const std::vector<RGB>& votes) {
     out.b = best.b / best.count;
     out.a = 255;
     return out;
+
 }
 
 //mode vote

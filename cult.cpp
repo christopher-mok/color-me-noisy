@@ -102,6 +102,9 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
     m_outputFrames.resize(m_frames.size());
 
+    // Pixel Vector Change
+    m_vectorFields = createVectorFields(m_frames);
+
     //#pragma omp parallel for
     for(int i = 0; i < m_frames.size(); i++){
 

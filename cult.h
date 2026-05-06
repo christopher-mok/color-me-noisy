@@ -13,6 +13,7 @@
 #include "image_pyramid.h"
 
 using NNF = std::vector<Match>;
+using VectorField = std::vector<std::vector<float>>;
 
 class Cult
 {
@@ -27,6 +28,7 @@ private:
 
     Image m_targetFrame;
     Image m_sourceTexture;
+    std::vector<VectorField> m_vectorFields;
 
     Image processFrame(const Image& frame, const Image& prevOutput);
     void initFrames(const QStringList &framePaths);
@@ -40,6 +42,7 @@ private:
     Image vote(const Image& target, const Image& source, NNF& nnf);
     RGB modeVote(const std::vector<RGB>& votes);
     Image extractSourceEdge(const Image& texture);
+    std::vector<VectorField> createVectorFields(const std::vector<Image>& frames);
     
     const int PATCH_RADIUS = 8;
     const int PATCHMATCH_ITERATIONS = 7;

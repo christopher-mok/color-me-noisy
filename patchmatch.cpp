@@ -13,7 +13,7 @@ NNF Patchmatch::run_patchmatch(const Image& target,
     NNF nnf;
     rng.seed(std::random_device{}());
 
-        initializeNNF(target, source, nnf, patchRadius, prevNNF);
+    initializeNNF(target, source, nnf, patchRadius, prevNNF);
 
     for(int i = 0; i < iterations; i++){
         if(i%2==0){ //Forward propogation
@@ -316,5 +316,36 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
     }
 
     return upsampled;
+}
+
+std::vector<bool> createEdgeMask(const Image& target){
+    std::vector<bool> edgeMask(target.height*target.width, false);
+
+    int WHITE_THRESHOLD = 200;
+    int BOUNDARY_DIST = 10;
+
+    for(int y = 1; y < target.height-1; y++){
+        for(int x = 1; x < target.width-1; x++){
+            RGB color = ImageUtils::rgbAt(target, x, y);
+            bool isWhite = (color.r >= WHITE_THRESHOLD)
+                           && (color.g >= WHITE_THRESHOLD)
+                           && (color.b >= WHITE_THRESHOLD);
+
+            bool hasNeighbor = false;
+
+            for(int dy = -BOUNDARY_DIST; dy < BOUNDARY_DIST; dy++){
+                for(int dx = - BOUNDARY_DIST; dx < BOUNDARY_DIST; dx++){
+                    RGB n = ImageUtils::rgbAt(target, dx, dy);
+                    if(n.r < WHITE_THRESHOLD && n.g < WHITE_THRESHOLD && n.b < WHITE_THRESHOLD)
+                        hasNeighbor = true;
+                }
+            }
+
+            edgeMask[y*target.width + x] = isWhite && hasNeighbor || !isWhite && hasNeighbor;
+
+        }
+    }
+
+    return edgeMask;
 }
 

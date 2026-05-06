@@ -50,6 +50,7 @@ private:
                              const Image& source,
                              NNF& nnf,
                              int patchRadius);
+    static std::vector<bool> createEdgeMask(const Image& target);
 
 };
 

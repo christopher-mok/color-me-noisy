@@ -401,12 +401,12 @@ RGB Cult::modeVote(const std::vector<RGB>& votes) {
 // }
 
 Image Cult::deformImage(const Image& image){
-    int gridSize = 50; //make this class variable
+    int gridSize = GRID_SIZE; //make this class variable
 
     thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> angleDist(0.f, 2.f * M_PI);
     // std::uniform_real_distribution<float> magnitudeDist(15.f, 25.f);
-    std::uniform_real_distribution<float> magnitudeDist(40.f, 60.f);
+    std::uniform_real_distribution<float> magnitudeDist(2.f, 7.f);
 
     std::vector<Eigen::Vector2f> originalPoints;
     std::vector<Eigen::Vector2f> deformedPoints;

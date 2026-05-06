@@ -40,11 +40,11 @@ private:
     Image vote(const Image& target, const Image& source, NNF& nnf);
     RGB modeVote(const std::vector<RGB>& votes);
     
-    const int PATCH_RADIUS = 10;
+    const int PATCH_RADIUS = 8;
     const int PATCHMATCH_ITERATIONS = 4;
     const int WEXLER_ITERS = 2;
     const float FILTER_STRENGTH = 0.5;
-    const int GRID_SIZE = 50;
+    const int GRID_SIZE = 100;
 };
 
 #endif // CULT_H

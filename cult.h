@@ -47,7 +47,7 @@ private:
     const int PATCH_RADIUS = 8;
     const int PATCHMATCH_ITERATIONS = 7;
     const int WEXLER_ITERS = 2;
-    const float FILTER_STRENGTH = 0.8;
+    const float FILTER_STRENGTH = 1.2;
     const int GRID_SIZE = 100;
 };
 

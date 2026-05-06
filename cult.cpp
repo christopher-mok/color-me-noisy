@@ -518,3 +518,41 @@ void Cult::saveFrames(const QString &outputDir) {
         ImageUtils::writeImage(m_outputFrames[i], outPath);
     }
 }
+
+std::vector<VectorField> Cult::createVectorFields(const std::vector<Image>& frames){
+
+    std::vector<VectorField> allFields(frames.size());
+
+    for(int i = 0; i < frames.size(); i++){
+        Image target = frames[i];
+        int w = target.width;
+        int h = target.height;
+        VectorField motionField(w*h, std::vector<float>(3, 1.f));
+
+        if(i == 0){ // If first frame, apply patchmatch everywhere
+            allFields[i] = motionField;
+            continue;
+        }
+
+        Image prev = frames[i-1];
+
+
+        for(int y = 0; y < h; y++){
+            for(int x = 0; x < w; x++){
+                RGB currRGB = ImageUtils::rgbAt(target, x, y);
+                RGB prevRGB = ImageUtils::rgbAt(prev, x, y);
+
+                motionField[y * w + x][0] = currRGB.r - prevRGB.r;
+                motionField[y * w + x][1] = currRGB.g - prevRGB.g;
+                motionField[y * w + x][2] = currRGB.b - prevRGB.b;
+            }
+        }
+
+        allFields[i] = motionField;
+    }
+
+    return allFields;
+
+}
+
+

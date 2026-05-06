@@ -25,6 +25,8 @@ public:
     static NNF upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
                                         int newWidth, int newHeight);
 
+    static std::vector<bool> createEdgeMask(const Image& target);
+
 private:
     static std::mt19937 rng;
 
@@ -50,7 +52,7 @@ private:
                              const Image& source,
                              NNF& nnf,
                              int patchRadius);
-    static std::vector<bool> createEdgeMask(const Image& target);
+
 
 };
 

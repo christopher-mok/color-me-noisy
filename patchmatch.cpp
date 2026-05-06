@@ -21,8 +21,11 @@ NNF Patchmatch::run_patchmatch(const Image& target,
         if(i%2==0){ //Forward propogation
             for(int y = 0; y < target.height; y++){
                 for(int x = 0; x < target.width; x++){
-                    propogateForward(x, y, target, source, nnf, patchRadius);
-                    randomSearch(x, y, target, source, nnf, patchRadius);
+                    bool targetIsBoundary = edgeMask[y*target.width + x];
+                    const Image& src = targetIsBoundary ? boundary : source;
+
+                    propogateForward(x, y, target, src, nnf, patchRadius);
+                    randomSearch(x, y, target, src, nnf, patchRadius);
 
                     //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
@@ -30,8 +33,11 @@ NNF Patchmatch::run_patchmatch(const Image& target,
         }else{ //Backward propogation
             for(int y = 0; y < target.height; y++){
                 for(int x = 0; x < target.width; x++){
-                    propogateBackward(x, y, target, source, nnf, patchRadius);
-                    randomSearch(x, y, target, source, nnf, patchRadius);
+                    bool targetIsBoundary = edgeMask[y*target.width + x];
+                    const Image& src = targetIsBoundary ? boundary : source;
+
+                    propogateBackward(x, y, target, src, nnf, patchRadius);
+                    randomSearch(x, y, target, src, nnf, patchRadius);
 
                     //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
@@ -320,34 +326,34 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
     return upsampled;
 }
 
+
 std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
-    std::vector<bool> edgeMask(target.height*target.width, false);
+    std::vector<bool> edgeMask(target.height * target.width, false);
+    float WHITE_THRESHOLD = 0.78f;
+    int BOUNDARY_DIST = 2;
 
-    int WHITE_THRESHOLD = 200;
-    int BOUNDARY_DIST = 1;
-
-    for(int y = 1; y < target.height-1; y++){
-        for(int x = 1; x < target.width-1; x++){
+    for(int y = 0; y < target.height; y++){
+        for(int x = 0; x < target.width; x++){
             RGB color = ImageUtils::rgbAt(target, x, y);
             bool isWhite = (color.r >= WHITE_THRESHOLD)
                            && (color.g >= WHITE_THRESHOLD)
                            && (color.b >= WHITE_THRESHOLD);
 
-            bool hasNeighbor = false;
-
-            for(int dy = -BOUNDARY_DIST; dy < BOUNDARY_DIST; dy++){
-                for(int dx = - BOUNDARY_DIST; dx < BOUNDARY_DIST; dx++){
-                    RGB n = ImageUtils::rgbAt(target, dx, dy);
-                    if(n.r < WHITE_THRESHOLD && n.g < WHITE_THRESHOLD && n.b < WHITE_THRESHOLD)
-                        hasNeighbor = true;
+            if(!isWhite){
+                bool hasWhiteNeighbor = false;
+                for(int dy = -BOUNDARY_DIST; dy <= BOUNDARY_DIST && !hasWhiteNeighbor; dy++){
+                    for(int dx = -BOUNDARY_DIST; dx <= BOUNDARY_DIST && !hasWhiteNeighbor; dx++){
+                        int nx = std::clamp(x+dx, 0, target.width-1);
+                        int ny = std::clamp(y+dy, 0, target.height-1);
+                        RGB n = ImageUtils::rgbAt(target, nx, ny);
+                        if(n.r >= WHITE_THRESHOLD && n.g >= WHITE_THRESHOLD && n.b >= WHITE_THRESHOLD)
+                            hasWhiteNeighbor = true;
+                    }
                 }
+                edgeMask[y * target.width + x] = hasWhiteNeighbor;
             }
-
-            edgeMask[y*target.width + x] = isWhite && hasNeighbor || !isWhite && hasNeighbor;
-
         }
     }
-
     return edgeMask;
 }
 

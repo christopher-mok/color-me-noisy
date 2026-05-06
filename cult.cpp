@@ -77,10 +77,28 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
     Image currentResult = framePyramid.back();
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
+    //dbg
+    std::vector<bool> edgeMask = Patchmatch::createEdgeMask(framePyramid[0]);
+    Image maskImg = framePyramid[0];
+    maskImg.pixels.resize(framePyramid[0].width * framePyramid[0].height);
+    for(int y = 0; y < framePyramid[0].height; y++){
+        for(int x = 0; x < framePyramid[0].width; x++){
+            RGB c;
+            c.r = edgeMask[y * framePyramid[0].width + x] ? 1.f : 0.f;
+            c.g = edgeMask[y * framePyramid[0].width + x] ? 1.f : 0.f;
+            c.b = edgeMask[y * framePyramid[0].width + x] ? 1.f : 0.f;
+            c.a = 255;
+            maskImg.pixels[y * framePyramid[0].width + x] = c;
+        }
+    }
+    ImageUtils::writeImage(maskImg, "../color-me-noisy/debug_pyramid/edge_mask.png");
+
     Image s_deformed = deformImage(m_sourceTexture);
 
     //REPLACE WITH BORDER
-    Image s_border = s_deformed;
+    QString boundaryPath = "../color-me-noisy/textures/strip.jpeg";
+    Image s_border = ImageUtils::readImage(boundaryPath, false);
+    // Image s_border = s_deformed;
 
     QString deformed_outPath = QString("../color-me-noisy/debug_pyramid/source_deformed.png");
     ImageUtils::writeImage(s_deformed, deformed_outPath);
@@ -107,7 +125,9 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
 //        Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
-        Image& cur_border = borderPyramid[level];
+        // Image& cur_border = borderPyramid[level];
+        Image& cur_border = s_border;
+
         if (level < (int)framePyramid.size() - 1) {
             currentResult = ImagePyramid::upsample(currentResult);
         }
@@ -122,7 +142,7 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
         }
 
         prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, cur_border, PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
-        output_frame = vote(currentResult, cur_source, cur_source, prevNNF);
+        output_frame = vote(currentResult, cur_source, cur_border, prevNNF);
         currentResult = output_frame;
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
@@ -145,30 +165,28 @@ Image Cult::patchmatch(const Image& target, const Image& source, const Image& bo
 }
 
 Image Cult::vote(const Image& target, const Image& source, const Image& boundary, NNF& nnf){
-
-
+    std::vector<bool> edgeMask = Patchmatch::createEdgeMask(target);
     Image processed_frame = target;
     processed_frame.pixels.resize(target.width * target.height);
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
-            std::vector<RGB> candidates;
+            bool isBoundary = edgeMask[y * target.width + x];
+            const Image& src = isBoundary ? boundary : source;
 
+            std::vector<RGB> candidates;
             for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
                 for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
                     int px = x + dx;
                     int py = y + dy;
+                    if(!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)) continue;
 
-                    if(!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS))
-                        continue;
-
-                    Match match = nnf[py*target.width + px];
-
+                    Match match = nnf[py * target.width + px];
                     int sx = match.u - dx;
                     int sy = match.v - dy;
 
-                    if(sx >= 0 && sx < source.width && sy >= 0 && sy < source.height){
-                        candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
+                    if(sx >= 0 && sx < src.width && sy >= 0 && sy < src.height){
+                        candidates.push_back(ImageUtils::rgbAt(src, sx, sy));
                     }
                 }
             }
@@ -180,9 +198,48 @@ Image Cult::vote(const Image& target, const Image& source, const Image& boundary
             }
         }
     }
-
     return processed_frame;
 }
+
+// Image Cult::vote(const Image& target, const Image& source, const Image& boundary, NNF& nnf){
+
+
+//     Image processed_frame = target;
+//     processed_frame.pixels.resize(target.width * target.height);
+
+//     for(int y = 0; y < target.height; y++){
+//         for(int x = 0; x < target.width; x++){
+//             std::vector<RGB> candidates;
+
+//             for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
+//                 for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+//                     int px = x + dx;
+//                     int py = y + dy;
+
+//                     if(!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS))
+//                         continue;
+
+//                     Match match = nnf[py*target.width + px];
+
+//                     int sx = match.u - dx;
+//                     int sy = match.v - dy;
+
+//                     if(sx >= 0 && sx < source.width && sy >= 0 && sy < source.height){
+//                         candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
+//                     }
+//                 }
+//             }
+
+//             if(!candidates.empty()){
+//                 processed_frame.pixels[y * target.width + x] = modeVote(candidates);
+//             } else {
+//                 processed_frame.pixels[y * target.width + x] = ImageUtils::rgbAt(target, x, y);
+//             }
+//         }
+//     }
+
+//     return processed_frame;
+// }
 
 RGB Cult::modeVote(const std::vector<RGB>& votes) {
     struct Bucket {

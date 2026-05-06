@@ -41,7 +41,7 @@ private:
     RGB modeVote(const std::vector<RGB>& votes);
     Image extractSourceEdge(const Image& texture);
     
-    const int PATCH_RADIUS = 8;
+    const int PATCH_RADIUS = 3;
     const int PATCHMATCH_ITERATIONS = 4;
     const int WEXLER_ITERS = 2;
     const float FILTER_STRENGTH = 0.5;

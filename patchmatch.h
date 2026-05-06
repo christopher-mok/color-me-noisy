@@ -17,7 +17,7 @@ class Patchmatch
 {
 public:
     static NNF run_patchmatch(const Image& target,
-                              const Image& source,
+                              const Image& source, const Image& boundary,
                               int patchRadius,
                               int iterations, NNF* prevNNF = nullptr);
     static bool isValidPatch(const Image& image, int x, int y, int patchRadius);

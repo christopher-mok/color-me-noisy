@@ -35,10 +35,11 @@ private:
     Image deformImage(const Image& image);
     Image arapMLS(const Image& image, std::vector<Eigen::Vector2f>& originalPoints,
                   std::vector<Eigen::Vector2f>& deformedPoints);
-    Image patchmatch(const Image& target, const Image& source);
+    Image patchmatch(const Image& target, const Image& source, const Image& boundarySource);
 
-    Image vote(const Image& target, const Image& source, NNF& nnf);
+    Image vote(const Image& target, const Image& source, const Image & boundary, NNF& nnf);
     RGB modeVote(const std::vector<RGB>& votes);
+    Image extractSourceEdge(const Image& texture);
     
     const int PATCH_RADIUS = 8;
     const int PATCHMATCH_ITERATIONS = 4;

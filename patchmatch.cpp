@@ -15,6 +15,8 @@ NNF Patchmatch::run_patchmatch(const Image& target,
 
     initializeNNF(target, source, nnf, patchRadius, prevNNF);
 
+    std::vector<bool> edgeMask = createEdgeMask(target);
+
     for(int i = 0; i < iterations; i++){
         if(i%2==0){ //Forward propogation
             for(int y = 0; y < target.height; y++){
@@ -318,11 +320,11 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
     return upsampled;
 }
 
-std::vector<bool> createEdgeMask(const Image& target){
+std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
     std::vector<bool> edgeMask(target.height*target.width, false);
 
     int WHITE_THRESHOLD = 200;
-    int BOUNDARY_DIST = 10;
+    int BOUNDARY_DIST = 1;
 
     for(int y = 1; y < target.height-1; y++){
         for(int x = 1; x < target.width-1; x++){

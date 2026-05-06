@@ -1,6 +1,7 @@
 #include "cult.h"
 #include "image_utils.h"
 #include "image_pyramid.h"
+#include <algorithm>
 #include <random>
 #include <omp.h>
 
@@ -8,6 +9,74 @@
 
 
 Cult::Cult() {
+}
+
+static std::vector<bool> resizeMaskNearest(const std::vector<bool>& mask,
+                                           int oldWidth,
+                                           int oldHeight,
+                                           int newWidth,
+                                           int newHeight){
+    std::vector<bool> resized(newWidth * newHeight, false);
+    if(mask.size() != (size_t)(oldWidth * oldHeight) || oldWidth <= 0 || oldHeight <= 0){
+        return resized;
+    }
+
+    for(int y = 0; y < newHeight; y++){
+        int sy = std::clamp((int)((float)y * oldHeight / newHeight), 0, oldHeight - 1);
+        for(int x = 0; x < newWidth; x++){
+            int sx = std::clamp((int)((float)x * oldWidth / newWidth), 0, oldWidth - 1);
+            resized[y * newWidth + x] = mask[sy * oldWidth + sx];
+        }
+    }
+
+    return resized;
+}
+
+static Image maskToDebugImage(const std::vector<bool>& mask, int width, int height){
+    Image img;
+    img.width = width;
+    img.height = height;
+    img.isFrame = false;
+    img.pixels.resize(width * height);
+
+    for(int y = 0; y < height; y++){
+        for(int x = 0; x < width; x++){
+            bool isBoundary = mask.size() == (size_t)(width * height) && mask[y * width + x];
+            RGB c;
+            c.r = isBoundary ? 1.f : 0.f;
+            c.g = isBoundary ? 1.f : 0.f;
+            c.b = isBoundary ? 1.f : 0.f;
+            c.a = 1.f;
+            img.pixels[y * width + x] = c;
+        }
+    }
+
+    return img;
+}
+
+static Image maskedSourceDebugImage(const Image& source, const std::vector<bool>& mask){
+    Image img = source;
+    img.pixels.resize(source.width * source.height);
+
+    for(int y = 0; y < source.height; y++){
+        for(int x = 0; x < source.width; x++){
+            bool isBoundary = mask.size() == (size_t)(source.width * source.height) &&
+                              mask[y * source.width + x];
+            if(isBoundary){
+                img.pixels[y * source.width + x] = ImageUtils::rgbAt(source, x, y);
+            }
+            else{
+                RGB c;
+                c.r = 0.f;
+                c.g = 0.f;
+                c.b = 0.f;
+                c.a = 1.f;
+                img.pixels[y * source.width + x] = c;
+            }
+        }
+    }
+
+    return img;
 }
 
 void Cult::run(const QStringList &framePaths, const QString &texturePath) {
@@ -95,18 +164,16 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     Image s_deformed = deformImage(m_sourceTexture);
 
-    //REPLACE WITH BORDER
-    QString boundaryPath = "../color-me-noisy/textures/strip.jpeg";
-    Image s_border = ImageUtils::readImage(boundaryPath, false);
-    // Image s_border = s_deformed;
-
     QString deformed_outPath = QString("../color-me-noisy/debug_pyramid/source_deformed.png");
     ImageUtils::writeImage(s_deformed, deformed_outPath);
     std::cout<<"Deformed source texture"<<std::endl;
 
     std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
     // std::cout<<"Created source pyramids"<<std::endl;
-    std::vector<Image> borderPyramid = ImagePyramid::make_gaussian_pyramid(s_border, FILTER_STRENGTH);
+
+    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(s_deformed);
+    Image sourceBoundaryImg = maskedSourceDebugImage(s_deformed, sourceBoundaryMask);
+    ImageUtils::writeImage(sourceBoundaryImg, "../color-me-noisy/debug_pyramid/source_boundary_mask.png");
 
     for(int i = 0; i < sourcePyramid.size(); i++){
         Image cur_image = sourcePyramid[i];
@@ -125,11 +192,24 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
 //        Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
-        // Image& cur_border = borderPyramid[level];
-        Image& cur_border = s_border;
+        std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(framePyramid[level]);
+        std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(cur_source);
+
+        Image sourceBoundaryLevelImg = maskedSourceDebugImage(cur_source, sourceBoundaryMask);
+        QString sourceBoundaryPath = QString("../color-me-noisy/debug_pyramid/source_boundary_mask_level_%1.png").arg(level);
+        ImageUtils::writeImage(sourceBoundaryLevelImg, sourceBoundaryPath);
 
         if (level < (int)framePyramid.size() - 1) {
             currentResult = ImagePyramid::upsample(currentResult);
+        }
+
+        if(currentResult.width != framePyramid[level].width ||
+           currentResult.height != framePyramid[level].height){
+            targetBoundaryMask = resizeMaskNearest(targetBoundaryMask,
+                                                   framePyramid[level].width,
+                                                   framePyramid[level].height,
+                                                   currentResult.width,
+                                                   currentResult.height);
         }
 
 
@@ -141,8 +221,9 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
             seedNNF = &upscaled;
         }
 
-        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, cur_border, PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
-        output_frame = vote(currentResult, cur_source, cur_border, prevNNF);
+        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask,
+                                             PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
+        output_frame = vote(currentResult, cur_source, prevNNF);
         currentResult = output_frame;
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
@@ -154,26 +235,25 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
 }
 
-Image Cult::patchmatch(const Image& target, const Image& source, const Image& boundarySource){
+Image Cult::patchmatch(const Image& target, const Image& source){
     Image output_image;
 
     //std::cout<<"Running Patchmatch"<<std::endl;
-    NNF nnf = Patchmatch::run_patchmatch(target, source, boundarySource, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
-    output_image = vote(target, source, boundarySource, nnf);
+    std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
+    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
+    NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
+                                         PATCH_RADIUS, PATCHMATCH_ITERATIONS);
+    output_image = vote(target, source, nnf);
     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;
 }
 
-Image Cult::vote(const Image& target, const Image& source, const Image& boundary, NNF& nnf){
-    std::vector<bool> edgeMask = Patchmatch::createEdgeMask(target);
+Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
     Image processed_frame = target;
     processed_frame.pixels.resize(target.width * target.height);
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
-            bool isBoundary = edgeMask[y * target.width + x];
-            const Image& src = isBoundary ? boundary : source;
-
             std::vector<RGB> candidates;
             for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
                 for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
@@ -185,8 +265,8 @@ Image Cult::vote(const Image& target, const Image& source, const Image& boundary
                     int sx = match.u - dx;
                     int sy = match.v - dy;
 
-                    if(sx >= 0 && sx < src.width && sy >= 0 && sy < src.height){
-                        candidates.push_back(ImageUtils::rgbAt(src, sx, sy));
+                    if(sx >= 0 && sx < source.width && sy >= 0 && sy < source.height){
+                        candidates.push_back(ImageUtils::rgbAt(source, sx, sy));
                     }
                 }
             }
@@ -438,4 +518,3 @@ void Cult::saveFrames(const QString &outputDir) {
         ImageUtils::writeImage(m_outputFrames[i], outPath);
     }
 }
-

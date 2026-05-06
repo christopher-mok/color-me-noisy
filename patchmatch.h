@@ -17,7 +17,9 @@ class Patchmatch
 {
 public:
     static NNF run_patchmatch(const Image& target,
-                              const Image& source, const Image& boundary,
+                              const Image& source,
+                              const std::vector<bool>& targetBoundaryMask,
+                              const std::vector<bool>& sourceBoundaryMask,
                               int patchRadius,
                               int iterations, NNF* prevNNF = nullptr);
     static bool isValidPatch(const Image& image, int x, int y, int patchRadius);
@@ -35,23 +37,37 @@ private:
                                int patchRadius);
     static void initializeNNF(const Image& target,
                               const Image& source,
+                              const std::vector<bool>& targetBoundaryMask,
+                              const std::vector<bool>& sourceBoundaryMask,
                               NNF& nnf,
                               int patchRadius, NNF* prevNNF = nullptr);
+    static bool isAllowedSourcePatch(const Image& source,
+                                     const std::vector<bool>& sourceBoundaryMask,
+                                     int sx,
+                                     int sy,
+                                     int patchRadius,
+                                     bool requireBoundary);
     static void propogateForward(int x, int y,
                                  const Image& target,
                                  const Image& source,
+                                 const std::vector<bool>& sourceBoundaryMask,
                                  NNF& nnf,
-                                 int patchRadius);
+                                 int patchRadius,
+                                 bool requireBoundary);
     static void propogateBackward(int x, int y,
                                   const Image& target,
                                   const Image& source,
+                                  const std::vector<bool>& sourceBoundaryMask,
                                   NNF& nnf,
-                                  int patchRadius);
+                                  int patchRadius,
+                                  bool requireBoundary);
     static void randomSearch(int x, int y,
                              const Image& target,
                              const Image& source,
+                             const std::vector<bool>& sourceBoundaryMask,
                              NNF& nnf,
-                             int patchRadius);
+                             int patchRadius,
+                             bool requireBoundary);
 
 
 };

@@ -1,5 +1,7 @@
 #include "patchmatch.h"
+#include <algorithm>
 #include <iostream>
+#include <limits>
 #include <omp.h>
 
 
@@ -7,37 +9,48 @@
 //TARGET: the frame we are stylizing
 //SOURCE: the texture we are copying pixels from
 NNF Patchmatch::run_patchmatch(const Image& target,
-                               const Image& source, const Image& boundary,
+                               const Image& source,
+                               const std::vector<bool>& targetBoundaryMask,
+                               const std::vector<bool>& sourceBoundaryMask,
                                int patchRadius,
                                int iterations, NNF* prevNNF){
     NNF nnf;
     rng.seed(std::random_device{}());
 
-    initializeNNF(target, source, nnf, patchRadius, prevNNF);
+    bool hasBoundarySource = sourceBoundaryMask.size() != (size_t)(source.width * source.height);
+    if(!hasBoundarySource){
+        for(int sy = patchRadius; sy <= source.height - 1 - patchRadius && !hasBoundarySource; sy++){
+            for(int sx = patchRadius; sx <= source.width - 1 - patchRadius && !hasBoundarySource; sx++){
+                hasBoundarySource = sourceBoundaryMask[sy * source.width + sx];
+            }
+        }
+    }
 
-    std::vector<bool> edgeMask = createEdgeMask(target);
+    initializeNNF(target, source, targetBoundaryMask, sourceBoundaryMask, nnf, patchRadius, prevNNF);
 
     for(int i = 0; i < iterations; i++){
         if(i%2==0){ //Forward propogation
             for(int y = 0; y < target.height; y++){
                 for(int x = 0; x < target.width; x++){
-                    bool targetIsBoundary = edgeMask[y*target.width + x];
-                    const Image& src = targetIsBoundary ? boundary : source;
+                    bool targetIsBoundary = hasBoundarySource &&
+                                            targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
+                                            targetBoundaryMask[y*target.width + x];
 
-                    propogateForward(x, y, target, src, nnf, patchRadius);
-                    randomSearch(x, y, target, src, nnf, patchRadius);
+                    propogateForward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                    randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
 
                     //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
             }
         }else{ //Backward propogation
-            for(int y = 0; y < target.height; y++){
-                for(int x = 0; x < target.width; x++){
-                    bool targetIsBoundary = edgeMask[y*target.width + x];
-                    const Image& src = targetIsBoundary ? boundary : source;
+            for(int y = target.height - 1; y >= 0; y--){
+                for(int x = target.width - 1; x >= 0; x--){
+                    bool targetIsBoundary = hasBoundarySource &&
+                                            targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
+                                            targetBoundaryMask[y*target.width + x];
 
-                    propogateBackward(x, y, target, src, nnf, patchRadius);
-                    randomSearch(x, y, target, src, nnf, patchRadius);
+                    propogateBackward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                    randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
 
                     //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
                 }
@@ -81,7 +94,30 @@ bool Patchmatch::isValidPatch(const Image& image, int x, int y, int patchRadius)
            && (y-patchRadius >= 0) && (y+patchRadius < image.height);
 }
 
+bool Patchmatch::isAllowedSourcePatch(const Image& source,
+                                      const std::vector<bool>& sourceBoundaryMask,
+                                      int sx,
+                                      int sy,
+                                      int patchRadius,
+                                      bool requireBoundary){
+    if(!isValidPatch(source, sx, sy, patchRadius)){
+        return false;
+    }
+
+    if(!requireBoundary){
+        return true;
+    }
+
+    if(sourceBoundaryMask.size() != (size_t)(source.width * source.height)){
+        return true;
+    }
+
+    return sourceBoundaryMask[sy * source.width + sx];
+}
+
 void Patchmatch::initializeNNF(const Image& target, const Image& source,
+                    const std::vector<bool>& targetBoundaryMask,
+                    const std::vector<bool>& sourceBoundaryMask,
                     NNF& nnf, int patchRadius, NNF* prevNNF){
 
     thread_local std::mt19937 localRng(std::random_device{}());
@@ -103,6 +139,14 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
 
     std::uniform_int_distribution<int> distX(minX, maxX);
     std::uniform_int_distribution<int> distY(minY, maxY);
+    std::vector<int> boundaryCandidates;
+    for(int sy = minY; sy <= maxY; sy++){
+        for(int sx = minX; sx <= maxX; sx++){
+            if(isAllowedSourcePatch(source, sourceBoundaryMask, sx, sy, patchRadius, true)){
+                boundaryCandidates.push_back(sy * source.width + sx);
+            }
+        }
+    }
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
@@ -115,13 +159,26 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
             //     //randomize sy to 0 to source.height
             // }while(!isValidPatch(source, sx, sy, patchRadius));
 
+            bool targetIsBoundary = !boundaryCandidates.empty() &&
+                                    targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
+                                    targetBoundaryMask[y * target.width + x];
+            bool hasSeed = false;
+
             if(prevNNF != nullptr){
                 // Use upsampled match from coarser level as starting point
                 Match prev = (*prevNNF)[y * target.width + x];
                 sx = std::clamp(prev.u, minX, maxX);
                 sy = std::clamp(prev.v, minY, maxY);
+                hasSeed = isAllowedSourcePatch(source, sourceBoundaryMask, sx, sy, patchRadius, targetIsBoundary);
             }
-            else{
+
+            if(!hasSeed && targetIsBoundary && !boundaryCandidates.empty()){
+                std::uniform_int_distribution<int> boundaryDist(0, (int)boundaryCandidates.size() - 1);
+                int idx = boundaryCandidates[boundaryDist(localRng)];
+                sx = idx % source.width;
+                sy = idx / source.width;
+            }
+            else if(!hasSeed){
                 sx = distX(localRng);
                 sy = distY(localRng);
             }
@@ -132,7 +189,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
             match.dist = std::numeric_limits<float>::max();
 
             //match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
-            if(isValidPatch(target, x, y, patchRadius)){
+            if(isValidPatch(target, x, y, patchRadius) &&
+               isAllowedSourcePatch(source, sourceBoundaryMask, sx, sy, patchRadius, targetIsBoundary)){
                 match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
             }
 
@@ -145,7 +203,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
 
 //For neighbors left and above
 void Patchmatch::propogateForward(int x, int y, const Image& target, const Image& source,
-                      NNF& nnf, int patchRadius){
+                      const std::vector<bool>& sourceBoundaryMask, NNF& nnf,
+                      int patchRadius, bool requireBoundary){
     //TODO
     //init:
         //candidate 1: input x,y nnf
@@ -164,8 +223,7 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         Match left = nnf[y*target.width + x-1];
         int cx = left.u + 1;
         int cy = left.v;
-        float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
-        if(isValidPatch(source, cx, cy, patchRadius)){
+        if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
             float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
             if(c_dist < current.dist){
                 current.dist = c_dist;
@@ -181,7 +239,7 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         int cx = left.u;
         int cy = left.v + 1;
 
-        if(isValidPatch(source, cx, cy, patchRadius)){
+        if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
             float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
             if(c_dist < current.dist){
                 current.dist = c_dist;
@@ -196,7 +254,8 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
 
 //for neighbors right and below
 void Patchmatch::propogateBackward(int x, int y, const Image& target,
-                       const Image& source, NNF& nnf, int patchRadius){
+                       const Image& source, const std::vector<bool>& sourceBoundaryMask,
+                       NNF& nnf, int patchRadius, bool requireBoundary){
     //TODO
     //init:
         //candidate 1: input x,y nnf
@@ -217,7 +276,7 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
         //float dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
 
         //bool neighValid = isValidPatch(source, cx, cy, patchRadius);
-        if(isValidPatch(source, cx, cy, patchRadius)){
+        if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
             float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
             if(c_dist < curr.dist){
                 curr.dist = c_dist;
@@ -234,7 +293,7 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
         int cx = neigh.u;
         int cy = neigh.v-1;
 
-        if(isValidPatch(source, cx, cy, patchRadius)){  // ← check first
+        if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
             float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
             if(c_dist < curr.dist){
                 curr.dist = c_dist;
@@ -251,7 +310,8 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
 }
 
 void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& source,
-                  NNF& nnf, int patchRadius){
+                  const std::vector<bool>& sourceBoundaryMask, NNF& nnf,
+                  int patchRadius, bool requireBoundary){
     //init sx and sy to nnf[x,y], this is current best
 
     if(!isValidPatch(target, x, y, patchRadius)) return;
@@ -273,15 +333,26 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
 
     //while rad > 1
     while(radius > 1){
-        int cx, cy;
+        bool foundCandidate = false;
+        int cx = sx;
+        int cy = sy;
         //randomly sample in search radius around current best
         // do{
         //     cx = std::clamp(sx + (int)(distX(localRng)*((float)radius)), 0, source.width);
         //     cy = std::clamp(sy + (int)(distY(localRng)*((float)radius)), 0, source.height);
         // }while(!isValidPatch(source, cx, cy, patchRadius));
 
-        cx = std::clamp(sx + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
-        cy = std::clamp(sy + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
+        for(int attempt = 0; attempt < 16 && !foundCandidate; attempt++){
+            cx = std::clamp(sx + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
+            cy = std::clamp(sy + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
+            foundCandidate = isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary);
+        }
+
+        if(!foundCandidate){
+            radius *= 0.5f;
+            continue;
+        }
+
         //if valid, check if patchdist of new sample < best sample
         float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
         if(c_distance < bestDist){
@@ -330,7 +401,7 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
 std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
     std::vector<bool> edgeMask(target.height * target.width, false);
     float WHITE_THRESHOLD = 0.78f;
-    int BOUNDARY_DIST = 2;
+    int BOUNDARY_DIST = 6;
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
@@ -339,21 +410,20 @@ std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
                            && (color.g >= WHITE_THRESHOLD)
                            && (color.b >= WHITE_THRESHOLD);
 
-            if(!isWhite){
-                bool hasWhiteNeighbor = false;
-                for(int dy = -BOUNDARY_DIST; dy <= BOUNDARY_DIST && !hasWhiteNeighbor; dy++){
-                    for(int dx = -BOUNDARY_DIST; dx <= BOUNDARY_DIST && !hasWhiteNeighbor; dx++){
-                        int nx = std::clamp(x+dx, 0, target.width-1);
-                        int ny = std::clamp(y+dy, 0, target.height-1);
-                        RGB n = ImageUtils::rgbAt(target, nx, ny);
-                        if(n.r >= WHITE_THRESHOLD && n.g >= WHITE_THRESHOLD && n.b >= WHITE_THRESHOLD)
-                            hasWhiteNeighbor = true;
-                    }
+            bool hasOppositeNeighbor = false;
+            for(int dy = -BOUNDARY_DIST; dy <= BOUNDARY_DIST && !hasOppositeNeighbor; dy++){
+                for(int dx = -BOUNDARY_DIST; dx <= BOUNDARY_DIST && !hasOppositeNeighbor; dx++){
+                    int nx = std::clamp(x+dx, 0, target.width-1);
+                    int ny = std::clamp(y+dy, 0, target.height-1);
+                    RGB n = ImageUtils::rgbAt(target, nx, ny);
+                    bool neighborIsWhite = (n.r >= WHITE_THRESHOLD)
+                                           && (n.g >= WHITE_THRESHOLD)
+                                           && (n.b >= WHITE_THRESHOLD);
+                    hasOppositeNeighbor = neighborIsWhite != isWhite;
                 }
-                edgeMask[y * target.width + x] = hasWhiteNeighbor;
             }
+            edgeMask[y * target.width + x] = hasOppositeNeighbor;
         }
     }
     return edgeMask;
 }
-

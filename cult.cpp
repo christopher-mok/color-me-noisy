@@ -138,7 +138,7 @@ Image Cult::patchmatch(const Image& target, const Image& source, const Image& bo
     Image output_image;
 
     //std::cout<<"Running Patchmatch"<<std::endl;
-    NNF nnf = Patchmatch::run_patchmatch(target, source, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
+    NNF nnf = Patchmatch::run_patchmatch(target, source, boundarySource, PATCH_RADIUS, PATCHMATCH_ITERATIONS);
     output_image = vote(target, source, boundarySource, nnf);
     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;

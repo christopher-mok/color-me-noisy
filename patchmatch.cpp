@@ -7,7 +7,7 @@
 //TARGET: the frame we are stylizing
 //SOURCE: the texture we are copying pixels from
 NNF Patchmatch::run_patchmatch(const Image& target,
-                               const Image& source,
+                               const Image& source, const Image& boundary,
                                int patchRadius,
                                int iterations, NNF* prevNNF){
     NNF nnf;

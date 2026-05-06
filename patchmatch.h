@@ -12,6 +12,7 @@ struct Match{
 };
 
 using NNF = std::vector<Match>;
+using VectorField = std::vector<std::vector<float>>;
 
 class Patchmatch
 {
@@ -20,6 +21,7 @@ public:
                               const Image& source,
                               const std::vector<bool>& targetBoundaryMask,
                               const std::vector<bool>& sourceBoundaryMask,
+                              const VectorField vectorField,
                               int patchRadius,
                               int iterations, NNF* prevNNF = nullptr);
     static bool isValidPatch(const Image& image, int x, int y, int patchRadius);
@@ -28,6 +30,7 @@ public:
                                         int newWidth, int newHeight);
 
     static std::vector<bool> createEdgeMask(const Image& target);
+    std::vector<VectorField> m_vectorFields;
 
 private:
     static std::mt19937 rng;

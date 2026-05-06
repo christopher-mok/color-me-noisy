@@ -26,11 +26,13 @@ private:
     std::vector<Image> m_outputFrames;
     std::vector<Image> m_texPyramid;
 
+
     Image m_targetFrame;
     Image m_sourceTexture;
     std::vector<VectorField> m_vectorFields;
+    NNF m_prevFrameNNF;
 
-    Image processFrame(const Image& frame, const Image& prevOutput);
+    Image processFrame(int frameNum, const Image& prevOutput);
     void initFrames(const QStringList &framePaths);
     void saveFrames(const QString &outputDir);
 

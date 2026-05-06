@@ -107,11 +107,10 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
     //#pragma omp parallel for
     for(int i = 0; i < m_frames.size(); i++){
-
         // //old test frames
         // Image cur_frame = ImageUtils::readImage(framePaths[i], true);
         // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
-        Image output_frame = processFrame(m_frames[i], prevOutput);
+        Image output_frame = processFrame(i, prevOutput);
 
         m_outputFrames[i] = output_frame;
         std::cout<<"Processed frame #"<<i<<std::endl;
@@ -142,7 +141,9 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
 }
 
-Image Cult::processFrame(const Image& frame, const Image& prevOutput){
+Image Cult::processFrame(int frameNum, const Image& prevOutput){
+
+    const Image frame = m_frames[frameNum];
     std::cout<<"Processing frame"<<std::endl;
     std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, FILTER_STRENGTH);
 
@@ -224,8 +225,10 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
             seedNNF = &upscaled;
         }
 
-        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask,
+        const VectorField vecField = m_vectorFields[frameNum];
+        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask, vecField,
                                              PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
+
         output_frame = vote(currentResult, cur_source, prevNNF);
         currentResult = output_frame;
 
@@ -234,22 +237,24 @@ Image Cult::processFrame(const Image& frame, const Image& prevOutput){
 
     }
 
+    m_prevFrameNNF = prevNNF;
+
     return output_frame;
 
 }
 
-Image Cult::patchmatch(const Image& target, const Image& source){
-    Image output_image;
+// Image Cult::patchmatch(const Image& target, const Image& source){
+//     Image output_image;
 
-    //std::cout<<"Running Patchmatch"<<std::endl;
-    std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
-    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
-    NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
-                                         PATCH_RADIUS, PATCHMATCH_ITERATIONS);
-    output_image = vote(target, source, nnf);
-    //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
-    return output_image;
-}
+//     //std::cout<<"Running Patchmatch"<<std::endl;
+//     std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
+//     std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
+//     NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
+//                                          PATCH_RADIUS, PATCHMATCH_ITERATIONS);
+//     output_image = vote(target, source, nnf);
+//     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
+//     return output_image;
+// }
 
 Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
     Image processed_frame = target;

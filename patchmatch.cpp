@@ -12,6 +12,7 @@ NNF Patchmatch::run_patchmatch(const Image& target,
                                const Image& source,
                                const std::vector<bool>& targetBoundaryMask,
                                const std::vector<bool>& sourceBoundaryMask,
+                               const VectorField vectorField,
                                int patchRadius,
                                int iterations, NNF* prevNNF){
     NNF nnf;
@@ -32,27 +33,42 @@ NNF Patchmatch::run_patchmatch(const Image& target,
         if(i%2==0){ //Forward propogation
             for(int y = 0; y < target.height; y++){
                 for(int x = 0; x < target.width; x++){
-                    bool targetIsBoundary = hasBoundarySource &&
-                                            targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
-                                            targetBoundaryMask[y*target.width + x];
+                    int indx = y * target.width + x;
+                    // Has Pixel Changed?
+                    std::vector pixelChangeRGB = vectorField[indx];
 
-                    propogateForward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
-                    randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                    if (!(pixelChangeRGB.empty())){
+                        bool targetIsBoundary = hasBoundarySource &&
+                                                targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
+                                                targetBoundaryMask[y*target.width + x];
 
-                    //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
+                        propogateForward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                        randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+
+                        //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
+                    }
+
+
                 }
             }
         }else{ //Backward propogation
             for(int y = target.height - 1; y >= 0; y--){
                 for(int x = target.width - 1; x >= 0; x--){
-                    bool targetIsBoundary = hasBoundarySource &&
-                                            targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
-                                            targetBoundaryMask[y*target.width + x];
 
-                    propogateBackward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
-                    randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                    int indx = y * target.width + x;
+                    // Has Pixel Changed?
+                    std::vector pixelChangeRGB = vectorField[indx];
 
-                    //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
+                    if (!(pixelChangeRGB.empty())){
+                        bool targetIsBoundary = hasBoundarySource &&
+                                                targetBoundaryMask.size() == (size_t)(target.width * target.height) &&
+                                                targetBoundaryMask[y*target.width + x];
+
+                        propogateBackward(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+                        randomSearch(x, y, target, source, sourceBoundaryMask, nnf, patchRadius, targetIsBoundary);
+
+                        //std::cout<<"Matching pixel "<<x + y*target.width<<std::endl;
+                    }
                 }
             }
         }

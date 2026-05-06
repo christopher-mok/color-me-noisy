@@ -20,8 +20,7 @@ public:
 
 private:
     QString dirpath = "../color-me-noisy/output_frames";
-    QString m_texturePath = "../color-me-noisy/textures/texture_resized.png"; //Path to image texture
-    //QString m_texturePath = "../color-me-noisy/textures/S.png"; //Path to image texture
+    QString m_texturePath = "../color-me-noisy/textures/S_feathered.jpeg"; //Path to image texture
     QString m_videoPath = "../color-me-noisy/source_videos/walker.mov";
     QStringList m_framePaths; // sorted list of image file paths
 
@@ -37,5 +36,4 @@ private:
 };
 
 #endif // MAINWINDOW_H
-
 

@@ -79,6 +79,18 @@ static Image maskedSourceDebugImage(const Image& source, const std::vector<bool>
     return img;
 }
 
+static int effectivePatchRadius(const Image& target, const Image& source, int requestedRadius){
+    int maxRadius = std::min({
+        requestedRadius,
+        (target.width - 1) / 2,
+        (target.height - 1) / 2,
+        (source.width - 1) / 2,
+        (source.height - 1) / 2
+    });
+
+    return std::max(0, maxRadius);
+}
+
 void Cult::run(const QStringList &framePaths, const QString &texturePath) {
 
     //Make source texture image pyramid - only do this once!
@@ -225,11 +237,18 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
             seedNNF = &upscaled;
         }
 
+<<<<<<< HEAD
         const VectorField vecField = m_vectorFields[frameNum];
         prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask, vecField,
                                              PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
 
         output_frame = vote(currentResult, cur_source, prevNNF);
+=======
+        int patchRadius = effectivePatchRadius(currentResult, cur_source, PATCH_RADIUS);
+        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask,
+                                             patchRadius, PATCHMATCH_ITERATIONS, seedNNF);
+        output_frame = vote(currentResult, cur_source, prevNNF, patchRadius);
+>>>>>>> origin/main
         currentResult = output_frame;
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
@@ -246,6 +265,7 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
 // Image Cult::patchmatch(const Image& target, const Image& source){
 //     Image output_image;
 
+<<<<<<< HEAD
 //     //std::cout<<"Running Patchmatch"<<std::endl;
 //     std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
 //     std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
@@ -255,19 +275,31 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
 //     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
 //     return output_image;
 // }
+=======
+    //std::cout<<"Running Patchmatch"<<std::endl;
+    std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
+    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
+    int patchRadius = effectivePatchRadius(target, source, PATCH_RADIUS);
+    NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
+                                         patchRadius, PATCHMATCH_ITERATIONS);
+    output_image = vote(target, source, nnf, patchRadius);
+    //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
+    return output_image;
+}
+>>>>>>> origin/main
 
-Image Cult::vote(const Image& target, const Image& source, NNF& nnf){
+Image Cult::vote(const Image& target, const Image& source, NNF& nnf, int patchRadius){
     Image processed_frame = target;
     processed_frame.pixels.resize(target.width * target.height);
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
             std::vector<RGB> candidates;
-            for(int dy = -PATCH_RADIUS; dy <= PATCH_RADIUS; dy++){
-                for(int dx = -PATCH_RADIUS; dx <= PATCH_RADIUS; dx++){
+            for(int dy = -patchRadius; dy <= patchRadius; dy++){
+                for(int dx = -patchRadius; dx <= patchRadius; dx++){
                     int px = x + dx;
                     int py = y + dy;
-                    if(!Patchmatch::isValidPatch(target, px, py, PATCH_RADIUS)) continue;
+                    if(!Patchmatch::isValidPatch(target, px, py, patchRadius)) continue;
 
                     Match match = nnf[py * target.width + px];
                     int sx = match.u - dx;
@@ -562,5 +594,4 @@ std::vector<VectorField> Cult::createVectorFields(const std::vector<Image>& fram
     return allFields;
 
 }
-
 

@@ -5,6 +5,10 @@
 #include <omp.h>
 
 
+static const int INITIAL_RANDOM_TRIALS = 12;
+static const int RANDOM_SEARCH_TRIALS = 8;
+static const int BOUNDARY_RANDOM_SEARCH_TRIALS = 32;
+
 
 //TARGET: the frame we are stylizing
 //SOURCE: the texture we are copying pixels from
@@ -194,6 +198,35 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
                 match.dist = patchDistance(target, x, y, source, sx, sy, patchRadius);
             }
 
+            if(isValidPatch(target, x, y, patchRadius)){
+                int randomTrials = targetIsBoundary ? BOUNDARY_RANDOM_SEARCH_TRIALS : INITIAL_RANDOM_TRIALS;
+                for(int i = 0; i < randomTrials; i++){
+                    int cx;
+                    int cy;
+                    if(targetIsBoundary && !boundaryCandidates.empty()){
+                        std::uniform_int_distribution<int> boundaryDist(0, (int)boundaryCandidates.size() - 1);
+                        int idx = boundaryCandidates[boundaryDist(localRng)];
+                        cx = idx % source.width;
+                        cy = idx / source.width;
+                    }
+                    else{
+                        cx = distX(localRng);
+                        cy = distY(localRng);
+                    }
+
+                    if(!isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, targetIsBoundary)){
+                        continue;
+                    }
+
+                    float cDist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+                    if(cDist < match.dist){
+                        match.dist = cDist;
+                        match.u = cx;
+                        match.v = cy;
+                    }
+                }
+            }
+
             nnf[y*target.width + x] = match;
         }
     }
@@ -333,32 +366,22 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
 
     //while rad > 1
     while(radius > 1){
-        bool foundCandidate = false;
-        int cx = sx;
-        int cy = sy;
-        //randomly sample in search radius around current best
-        // do{
-        //     cx = std::clamp(sx + (int)(distX(localRng)*((float)radius)), 0, source.width);
-        //     cy = std::clamp(sy + (int)(distY(localRng)*((float)radius)), 0, source.height);
-        // }while(!isValidPatch(source, cx, cy, patchRadius));
+        int trials = requireBoundary ? BOUNDARY_RANDOM_SEARCH_TRIALS : RANDOM_SEARCH_TRIALS;
+        for(int attempt = 0; attempt < trials; attempt++){
+            int cx = std::clamp(bestX + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
+            int cy = std::clamp(bestY + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
 
-        for(int attempt = 0; attempt < 16 && !foundCandidate; attempt++){
-            cx = std::clamp(sx + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
-            cy = std::clamp(sy + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
-            foundCandidate = isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary);
-        }
+            if(!isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
+                continue;
+            }
 
-        if(!foundCandidate){
-            radius *= 0.5f;
-            continue;
-        }
-
-        //if valid, check if patchdist of new sample < best sample
-        float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
-        if(c_distance < bestDist){
-            bestDist = c_distance;
-            bestX = cx;
-            bestY = cy;
+            //if valid, check if patchdist of new sample < best sample
+            float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            if(c_distance < bestDist){
+                bestDist = c_distance;
+                bestX = cx;
+                bestY = cy;
+            }
         }
         //if so, set nnf[x, y] to new match
 

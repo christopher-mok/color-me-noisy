@@ -39,7 +39,7 @@ private:
                   std::vector<Eigen::Vector2f>& deformedPoints);
     Image patchmatch(const Image& target, const Image& source);
 
-    Image vote(const Image& target, const Image& source, NNF& nnf);
+    Image vote(const Image& target, const Image& source, NNF& nnf, int patchRadius);
     RGB modeVote(const std::vector<RGB>& votes);
     Image extractSourceEdge(const Image& texture);
     std::vector<VectorField> createVectorFields(const std::vector<Image>& frames);

@@ -237,18 +237,12 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
             seedNNF = &upscaled;
         }
 
-<<<<<<< HEAD
         const VectorField vecField = m_vectorFields[frameNum];
-        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask, vecField,
-                                             PATCH_RADIUS, PATCHMATCH_ITERATIONS, seedNNF);
-
-        output_frame = vote(currentResult, cur_source, prevNNF);
-=======
         int patchRadius = effectivePatchRadius(currentResult, cur_source, PATCH_RADIUS);
-        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask,
+        prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask, vecField,
                                              patchRadius, PATCHMATCH_ITERATIONS, seedNNF);
+
         output_frame = vote(currentResult, cur_source, prevNNF, patchRadius);
->>>>>>> origin/main
         currentResult = output_frame;
 
         QString dbgPath = QString("../color-me-noisy/debug_pyramid/framepyramid_dbg_level_%1.png").arg(level);
@@ -262,31 +256,20 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
 
 }
 
-// Image Cult::patchmatch(const Image& target, const Image& source){
-//     Image output_image;
+Image Cult::patchmatch(const Image& target, const Image& source){
+    Image output_image;
 
-<<<<<<< HEAD
-//     //std::cout<<"Running Patchmatch"<<std::endl;
-//     std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
-//     std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
-//     NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
-//                                          PATCH_RADIUS, PATCHMATCH_ITERATIONS);
-//     output_image = vote(target, source, nnf);
-//     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
-//     return output_image;
-// }
-=======
     //std::cout<<"Running Patchmatch"<<std::endl;
     std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
     std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
     int patchRadius = effectivePatchRadius(target, source, PATCH_RADIUS);
-    NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask,
+    VectorField vecField(target.width * target.height, std::vector<float>(3, 1.f));
+    NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask, vecField,
                                          patchRadius, PATCHMATCH_ITERATIONS);
     output_image = vote(target, source, nnf, patchRadius);
     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;
 }
->>>>>>> origin/main
 
 Image Cult::vote(const Image& target, const Image& source, NNF& nnf, int patchRadius){
     Image processed_frame = target;
@@ -594,4 +577,3 @@ std::vector<VectorField> Cult::createVectorFields(const std::vector<Image>& fram
     return allFields;
 
 }
-

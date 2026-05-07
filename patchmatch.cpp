@@ -384,8 +384,20 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
     while(radius > 1){
         int trials = requireBoundary ? BOUNDARY_RANDOM_SEARCH_TRIALS : RANDOM_SEARCH_TRIALS;
         for(int attempt = 0; attempt < trials; attempt++){
-            int cx = std::clamp(bestX + (int)(distX(localRng)*radius), patchRadius, source.width-1-patchRadius);
-            int cy = std::clamp(bestY + (int)(distY(localRng)*radius), patchRadius, source.height-1-patchRadius);
+            int minX = std::max(patchRadius, bestX - radius);
+            int maxX = std::min(source.width - 1 - patchRadius, bestX + radius);
+            int minY = std::max(patchRadius, bestY - radius);
+            int maxY = std::min(source.height - 1 - patchRadius, bestY + radius);
+
+            if(minX > maxX || minY > maxY){
+                continue;
+            }
+
+            std::uniform_int_distribution<int> searchX(minX, maxX);
+            std::uniform_int_distribution<int> searchY(minY, maxY);
+
+            int cx = searchX(localRng);
+            int cy = searchY(localRng);
 
             if(!isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
                 continue;

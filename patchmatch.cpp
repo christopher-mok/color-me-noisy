@@ -1,13 +1,9 @@
 #include "patchmatch.h"
+#include "settings.h"
 #include <algorithm>
 #include <iostream>
 #include <limits>
 #include <omp.h>
-
-
-static const int INITIAL_RANDOM_TRIALS = 12;
-static const int RANDOM_SEARCH_TRIALS = 8;
-static const int BOUNDARY_RANDOM_SEARCH_TRIALS = 32;
 
 
 //TARGET: the frame we are stylizing
@@ -22,8 +18,10 @@ NNF Patchmatch::run_patchmatch(const Image& target,
     NNF nnf;
     rng.seed(std::random_device{}());
 
-    bool hasBoundarySource = sourceBoundaryMask.size() != (size_t)(source.width * source.height);
-    if(!hasBoundarySource){
+    bool hasBoundarySource = AppSettings::useBorder &&
+                             sourceBoundaryMask.size() == (size_t)(source.width * source.height);
+    if(hasBoundarySource){
+        hasBoundarySource = false;
         for(int sy = patchRadius; sy <= source.height - 1 - patchRadius && !hasBoundarySource; sy++){
             for(int sx = patchRadius; sx <= source.width - 1 - patchRadius && !hasBoundarySource; sx++){
                 hasBoundarySource = sourceBoundaryMask[sy * source.width + sx];
@@ -89,7 +87,8 @@ std::mt19937 Patchmatch::rng(std::random_device{}());
 //
 float Patchmatch::patchDistance(const Image& target, int tx, int ty,
                                 const Image& source, int sx, int sy,
-                                int patchRadius){
+                                int patchRadius,
+                                float maxDist){
     float dist = 0.f;
 
     for(int dx = -patchRadius; dx <= patchRadius; dx++){
@@ -103,6 +102,9 @@ float Patchmatch::patchDistance(const Image& target, int tx, int ty,
 
             //dist += dr*dr + dg*dg + db*db;
             dist += std::abs(dr) + std::abs(dg) + std::abs(db);
+        }
+        if(dist >= maxDist){
+            return dist;
         }
     }
 
@@ -129,7 +131,7 @@ bool Patchmatch::isAllowedSourcePatch(const Image& source,
     }
 
     if(sourceBoundaryMask.size() != (size_t)(source.width * source.height)){
-        return true;
+        return false;
     }
 
     return sourceBoundaryMask[sy * source.width + sx];
@@ -215,7 +217,8 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
             }
 
             if(isValidPatch(target, x, y, patchRadius)){
-                int randomTrials = targetIsBoundary ? BOUNDARY_RANDOM_SEARCH_TRIALS : INITIAL_RANDOM_TRIALS;
+                int randomTrials = targetIsBoundary ? AppSettings::boundaryRandomSearchTrials
+                                                    : AppSettings::initialRandomTrials;
                 for(int i = 0; i < randomTrials; i++){
                     int cx;
                     int cy;
@@ -234,7 +237,7 @@ void Patchmatch::initializeNNF(const Image& target, const Image& source,
                         continue;
                     }
 
-                    float cDist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+                    float cDist = patchDistance(target, x, y, source, cx, cy, patchRadius, match.dist);
                     if(cDist < match.dist){
                         match.dist = cDist;
                         match.u = cx;
@@ -273,7 +276,7 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         int cx = left.u + 1;
         int cy = left.v;
         if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
-            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius, current.dist);
             if(c_dist < current.dist){
                 current.dist = c_dist;
                 current.u = cx;
@@ -289,7 +292,7 @@ void Patchmatch::propogateForward(int x, int y, const Image& target, const Image
         int cy = left.v + 1;
 
         if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
-            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius, current.dist);
             if(c_dist < current.dist){
                 current.dist = c_dist;
                 current.u = cx;
@@ -326,7 +329,7 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
 
         //bool neighValid = isValidPatch(source, cx, cy, patchRadius);
         if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
-            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius, curr.dist);
             if(c_dist < curr.dist){
                 curr.dist = c_dist;
                 curr.u = cx;
@@ -343,7 +346,7 @@ void Patchmatch::propogateBackward(int x, int y, const Image& target,
         int cy = neigh.v-1;
 
         if(isAllowedSourcePatch(source, sourceBoundaryMask, cx, cy, patchRadius, requireBoundary)){
-            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            float c_dist = patchDistance(target, x, y, source, cx, cy, patchRadius, curr.dist);
             if(c_dist < curr.dist){
                 curr.dist = c_dist;
                 curr.u = cx;
@@ -382,7 +385,8 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
 
     //while rad > 1
     while(radius > 1){
-        int trials = requireBoundary ? BOUNDARY_RANDOM_SEARCH_TRIALS : RANDOM_SEARCH_TRIALS;
+        int trials = requireBoundary ? AppSettings::boundaryRandomSearchTrials
+                                     : AppSettings::randomSearchTrials;
         for(int attempt = 0; attempt < trials; attempt++){
             int minX = std::max(patchRadius, bestX - radius);
             int maxX = std::min(source.width - 1 - patchRadius, bestX + radius);
@@ -404,7 +408,7 @@ void Patchmatch::randomSearch(int x, int y, const Image& target, const Image& so
             }
 
             //if valid, check if patchdist of new sample < best sample
-            float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius);
+            float c_distance = patchDistance(target, x, y, source, cx, cy, patchRadius, bestDist);
             if(c_distance < bestDist){
                 bestDist = c_distance;
                 bestX = cx;
@@ -451,8 +455,8 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
 
 std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
     std::vector<bool> edgeMask(target.height * target.width, false);
-    float WHITE_THRESHOLD = 0.78f;
-    int BOUNDARY_DIST = 6;
+    float WHITE_THRESHOLD = AppSettings::whiteThreshold;
+    int BOUNDARY_DIST = AppSettings::boundaryDistance;
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){

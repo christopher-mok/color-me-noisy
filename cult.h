@@ -46,11 +46,6 @@ private:
     Image extractSourceEdge(const Image& texture);
     std::vector<VectorField> createVectorFields(const std::vector<Image>& frames);
     
-    const int PATCH_RADIUS = 8;
-    const int PATCHMATCH_ITERATIONS = 7;
-    const int WEXLER_ITERS = 2;
-    const float FILTER_STRENGTH = 1.2;
-    const int GRID_SIZE = 100;
 };
 
 #endif // CULT_H

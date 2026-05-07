@@ -9,6 +9,7 @@
 #include <QPixmap>
 
 #include "cult.h"
+#include "settings.h"
 
 class MainWindow : public QMainWindow
 {
@@ -20,8 +21,8 @@ public:
 
 private:
     QString dirpath = "../color-me-noisy/output_frames";
-    QString m_texturePath = "../color-me-noisy/textures/S_feathered.jpeg"; //Path to image texture
-    QString m_videoPath = "../color-me-noisy/source_videos/walker.mov";
+    QString m_texturePath = AppSettings::texturePath;
+    QString m_videoPath = AppSettings::videoPath;
     QStringList m_framePaths; // sorted list of image file paths
 
     QLabel *m_display;
@@ -36,4 +37,3 @@ private:
 };
 
 #endif // MAINWINDOW_H
-

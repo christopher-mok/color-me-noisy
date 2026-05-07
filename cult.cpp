@@ -1,6 +1,7 @@
 #include "cult.h"
 #include "image_utils.h"
 #include "image_pyramid.h"
+#include "settings.h"
 #include <algorithm>
 #include <random>
 #include <omp.h>
@@ -97,7 +98,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
     std::cout << texturePath.toStdString() << std::endl;
     Image tex = ImageUtils::readImage(texturePath, false);
     m_sourceTexture = tex;
-    m_texPyramid = ImagePyramid::make_gaussian_pyramid(tex, 0.5f);
+    m_texPyramid = ImagePyramid::make_gaussian_pyramid(tex, AppSettings::filterStrength);
 
     //save for debug
     for (int i = 0; i < m_texPyramid.size(); i++) {
@@ -105,7 +106,7 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
         ImageUtils::writeImage(m_texPyramid[i], outPath);
     }
 
-    m_frames = ImageUtils::readVideo("../color-me-noisy/source_videos/walker.mov");
+    m_frames = ImageUtils::readVideo(AppSettings::videoPath);
 
     Image prevOutput;
     // Image cur_frame = ImageUtils::readImage(framePaths[0], true);
@@ -157,13 +158,15 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
 
     const Image frame = m_frames[frameNum];
     std::cout<<"Processing frame"<<std::endl;
-    std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, FILTER_STRENGTH);
+    std::vector<Image> framePyramid = ImagePyramid::make_gaussian_pyramid(frame, AppSettings::filterStrength);
 
     Image currentResult = framePyramid.back();
     Image output_frame = framePyramid.back(); // start at coarsest/most blurred (end of pyramid)
 
     //dbg
-    std::vector<bool> edgeMask = Patchmatch::createEdgeMask(framePyramid[0]);
+    std::vector<bool> edgeMask = AppSettings::useBorder
+                                      ? Patchmatch::createEdgeMask(framePyramid[0])
+                                      : std::vector<bool>(framePyramid[0].width * framePyramid[0].height, false);
     Image maskImg = framePyramid[0];
     maskImg.pixels.resize(framePyramid[0].width * framePyramid[0].height);
     for(int y = 0; y < framePyramid[0].height; y++){
@@ -178,18 +181,22 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
     }
     ImageUtils::writeImage(maskImg, "../color-me-noisy/debug_pyramid/edge_mask.png");
 
-    Image s_deformed = deformImage(m_sourceTexture);
+    Image s_deformed = AppSettings::deformTexture ? deformImage(m_sourceTexture) : m_sourceTexture;
 
     QString deformed_outPath = QString("../color-me-noisy/debug_pyramid/source_deformed.png");
     ImageUtils::writeImage(s_deformed, deformed_outPath);
-    std::cout<<"Deformed source texture"<<std::endl;
+    std::cout << (AppSettings::deformTexture ? "Deformed source texture" : "Using undeformed source texture") << std::endl;
 
-    std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, FILTER_STRENGTH);
+    std::vector<Image> sourcePyramid = ImagePyramid::make_gaussian_pyramid(s_deformed, AppSettings::filterStrength);
     // std::cout<<"Created source pyramids"<<std::endl;
 
-    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(s_deformed);
-    Image sourceBoundaryImg = maskedSourceDebugImage(s_deformed, sourceBoundaryMask);
-    ImageUtils::writeImage(sourceBoundaryImg, "../color-me-noisy/debug_pyramid/source_boundary_mask.png");
+    std::vector<bool> sourceBoundaryMask = AppSettings::useBorder
+                                               ? Patchmatch::createEdgeMask(s_deformed)
+                                               : std::vector<bool>();
+    if(AppSettings::useBorder){
+        Image sourceBoundaryImg = maskedSourceDebugImage(s_deformed, sourceBoundaryMask);
+        ImageUtils::writeImage(sourceBoundaryImg, "../color-me-noisy/debug_pyramid/source_boundary_mask.png");
+    }
 
     for(int i = 0; i < sourcePyramid.size(); i++){
         Image cur_image = sourcePyramid[i];
@@ -208,12 +215,18 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
 
 //        Image& cur_target = framePyramid[level];
         Image& cur_source = sourcePyramid[level];
-        std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(framePyramid[level]);
-        std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(cur_source);
+        std::vector<bool> targetBoundaryMask = AppSettings::useBorder
+                                                   ? Patchmatch::createEdgeMask(framePyramid[level])
+                                                   : std::vector<bool>();
+        std::vector<bool> sourceBoundaryMask = AppSettings::useBorder
+                                                   ? Patchmatch::createEdgeMask(cur_source)
+                                                   : std::vector<bool>();
 
-        Image sourceBoundaryLevelImg = maskedSourceDebugImage(cur_source, sourceBoundaryMask);
-        QString sourceBoundaryPath = QString("../color-me-noisy/debug_pyramid/source_boundary_mask_level_%1.png").arg(level);
-        ImageUtils::writeImage(sourceBoundaryLevelImg, sourceBoundaryPath);
+        if(AppSettings::useBorder){
+            Image sourceBoundaryLevelImg = maskedSourceDebugImage(cur_source, sourceBoundaryMask);
+            QString sourceBoundaryPath = QString("../color-me-noisy/debug_pyramid/source_boundary_mask_level_%1.png").arg(level);
+            ImageUtils::writeImage(sourceBoundaryLevelImg, sourceBoundaryPath);
+        }
 
         if (level < (int)framePyramid.size() - 1) {
             currentResult = ImagePyramid::upsample(currentResult);
@@ -238,9 +251,9 @@ Image Cult::processFrame(int frameNum, const Image& prevOutput){
         }
 
         const VectorField vecField = m_vectorFields[frameNum];
-        int patchRadius = effectivePatchRadius(currentResult, cur_source, PATCH_RADIUS);
+        int patchRadius = effectivePatchRadius(currentResult, cur_source, AppSettings::patchRadius);
         prevNNF = Patchmatch::run_patchmatch(currentResult, cur_source, targetBoundaryMask, sourceBoundaryMask, vecField,
-                                             patchRadius, PATCHMATCH_ITERATIONS, seedNNF);
+                                             patchRadius, AppSettings::patchmatchIterations, seedNNF);
 
         output_frame = vote(currentResult, cur_source, prevNNF, patchRadius);
         currentResult = output_frame;
@@ -260,12 +273,12 @@ Image Cult::patchmatch(const Image& target, const Image& source){
     Image output_image;
 
     //std::cout<<"Running Patchmatch"<<std::endl;
-    std::vector<bool> targetBoundaryMask = Patchmatch::createEdgeMask(target);
-    std::vector<bool> sourceBoundaryMask = Patchmatch::createEdgeMask(source);
-    int patchRadius = effectivePatchRadius(target, source, PATCH_RADIUS);
+    std::vector<bool> targetBoundaryMask = AppSettings::useBorder ? Patchmatch::createEdgeMask(target) : std::vector<bool>();
+    std::vector<bool> sourceBoundaryMask = AppSettings::useBorder ? Patchmatch::createEdgeMask(source) : std::vector<bool>();
+    int patchRadius = effectivePatchRadius(target, source, AppSettings::patchRadius);
     VectorField vecField(target.width * target.height, std::vector<float>(3, 1.f));
     NNF nnf = Patchmatch::run_patchmatch(target, source, targetBoundaryMask, sourceBoundaryMask, vecField,
-                                         patchRadius, PATCHMATCH_ITERATIONS);
+                                         patchRadius, AppSettings::patchmatchIterations);
     output_image = vote(target, source, nnf, patchRadius);
     //std::cout<<"Finished Patchmatch and Voting"<<std::endl;
     return output_image;
@@ -434,7 +447,7 @@ RGB Cult::modeVote(const std::vector<RGB>& votes) {
 // }
 
 Image Cult::deformImage(const Image& image){
-    int gridSize = GRID_SIZE; //make this class variable
+    int gridSize = AppSettings::gridSize;
 
     thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> angleDist(0.f, 2.f * M_PI);

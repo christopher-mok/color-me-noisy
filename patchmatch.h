@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "image_utils.h"
+#include <limits>
 #include <random>
 
 struct Match{
@@ -37,7 +38,8 @@ private:
 
     static float patchDistance(const Image& target, int tx, int ty,
                                const Image& source, int sx, int sy,
-                               int patchRadius);
+                               int patchRadius,
+                               float maxDist = std::numeric_limits<float>::max());
     static void initializeNNF(const Image& target,
                               const Image& source,
                               const std::vector<bool>& targetBoundaryMask,

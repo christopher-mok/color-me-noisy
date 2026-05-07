@@ -13,26 +13,26 @@ const QString videoPath = "../color-me-noisy/source_videos/cicero_1.mov";
 // Enables boundary-aware sampling. true preserves watercolor border texture but
 // adds mask creation and more constrained PatchMatch search; false is faster and
 // uses the original single-source PatchMatch behavior.
-const bool useBorder = true;
+const bool useBorder = false;
 
 // Deforms the source texture once per processed frame before building its
 // pyramid. true adds organic texture variation but costs a full deformation pass
 // per frame. false is faster and keeps the source texture stable/repeatable.
-const bool deformTexture = true;
+const bool deformTexture = false;
 
 // Patch radius in pixels. Larger patches preserve broader texture structure but
 // are much slower because each candidate compares (2r+1)^2 pixels. Smaller
 // patches are faster and more local, but can look noisier or less coherent.
-const int patchRadius = 8;
+const int patchRadius = 6;
 
 // PatchMatch sweep count. More iterations usually improve matches and temporal/
 // spatial coherence, but runtime scales roughly linearly. Fewer iterations are
 // faster but can leave obviously wrong colors/patches.
-const int patchmatchIterations = 7;
+const int patchmatchIterations = 4;
 
 // Reserved for outer Wexler-style refinement passes. Increasing would multiply
 // the cost of the synthesis loop if wired in; currently kept as a tuning value.
-const int wexlerIterations = 2;
+const int wexlerIterations = 1;
 
 // Source deformation control grid spacing. Larger values deform the texture more
 // smoothly and cheaply. Smaller values allow more local warping but cost more in
@@ -42,7 +42,7 @@ const int gridSize = 100;
 // Pyramid blur/downsampling control. Larger values create more/coarser pyramid
 // smoothing and can improve large-scale coherence, but add pyramid levels/work.
 // Smaller values are faster and sharper, but may make matching less stable.
-const float filterStrength = 1.2f;
+const float filterStrength = 0.5f;
 
 // Pixels with all RGB channels above this are treated as white background by the
 // automatic border detector. Raising it makes background detection stricter;

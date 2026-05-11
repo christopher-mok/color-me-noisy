@@ -3,6 +3,9 @@
 #include "image_pyramid.h"
 #include "settings.h"
 #include <algorithm>
+#include <chrono>
+#include <iomanip>
+#include <sstream>
 #include <random>
 #include <omp.h>
 
@@ -118,16 +121,25 @@ void Cult::run(const QStringList &framePaths, const QString &texturePath) {
     // Pixel Vector Change
     m_vectorFields = createVectorFields(m_frames);
 
-    //#pragma omp parallel for
+    #pragma omp parallel for
     for(int i = 0; i < m_frames.size(); i++){
         // //old test frames
         // Image cur_frame = ImageUtils::readImage(framePaths[i], true);
         // Image output_frame = processFrame(cur_frame, prevOutput); //main loop happens here
+        auto frameStart = std::chrono::steady_clock::now();
         Image output_frame = processFrame(i, prevOutput);
+        auto frameEnd = std::chrono::steady_clock::now();
+        double frameSeconds = std::chrono::duration<double>(frameEnd - frameStart).count();
 
         m_outputFrames[i] = output_frame;
-        std::cout<<"Processed frame #"<<i<<std::endl;
-        break; // <----- KEEP TO PRINT 1 FRAME
+        #pragma omp critical
+        {
+            std::ostringstream durationText;
+            durationText << std::fixed << std::setprecision(2) << frameSeconds;
+            std::cout << "Processed frame #" << i
+                      << " in " << durationText.str() << "s" << std::endl;
+        }
+        //break; // <----- KEEP TO PRINT 1 FRAME
     }
 
 //    Image prevOutput;
@@ -452,7 +464,7 @@ Image Cult::deformImage(const Image& image){
     thread_local std::mt19937 rng(std::random_device{}());
     std::uniform_real_distribution<float> angleDist(0.f, 2.f * M_PI);
     // std::uniform_real_distribution<float> magnitudeDist(15.f, 25.f);
-    std::uniform_real_distribution<float> magnitudeDist(2.f, 7.f);
+    std::uniform_real_distribution<float> magnitudeDist(7.f, 15.f);
 
     std::vector<Eigen::Vector2f> originalPoints;
     std::vector<Eigen::Vector2f> deformedPoints;

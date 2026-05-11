@@ -21,7 +21,6 @@ public:
     static Image downsample(const Image& image, float fStrength);
 
 private:
-    //Set pyramid level for coarse consistency
     static void set_level(std::vector<Image>& pyramid, int level, const Image& image);
 
 

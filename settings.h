@@ -10,6 +10,7 @@ extern const QString videoPath;
 
 extern const bool useBorder;
 extern const bool deformTexture;
+extern const bool backgroundIsWhite;
 
 extern const int patchRadius;
 extern const int patchmatchIterations;

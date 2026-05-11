@@ -5,6 +5,25 @@
 #include <limits>
 #include <omp.h>
 
+namespace {
+
+bool isBackgroundPixel(const RGB& color){
+    const float threshold = AppSettings::whiteThreshold;
+
+    if(AppSettings::backgroundIsWhite){
+        return color.r >= threshold &&
+               color.g >= threshold &&
+               color.b >= threshold;
+    }
+
+    const float blackThreshold = 1.f - threshold;
+    return color.r <= blackThreshold &&
+           color.g <= blackThreshold &&
+           color.b <= blackThreshold;
+}
+
+}
+
 
 //TARGET: the frame we are stylizing
 //SOURCE: the texture we are copying pixels from
@@ -455,15 +474,12 @@ NNF Patchmatch::upscaleNNF(const NNF& nnf, int oldWidth, int oldHeight,
 
 std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
     std::vector<bool> edgeMask(target.height * target.width, false);
-    float WHITE_THRESHOLD = AppSettings::whiteThreshold;
     int BOUNDARY_DIST = AppSettings::boundaryDistance;
 
     for(int y = 0; y < target.height; y++){
         for(int x = 0; x < target.width; x++){
             RGB color = ImageUtils::rgbAt(target, x, y);
-            bool isWhite = (color.r >= WHITE_THRESHOLD)
-                           && (color.g >= WHITE_THRESHOLD)
-                           && (color.b >= WHITE_THRESHOLD);
+            bool isBackground = isBackgroundPixel(color);
 
             bool hasOppositeNeighbor = false;
             for(int dy = -BOUNDARY_DIST; dy <= BOUNDARY_DIST && !hasOppositeNeighbor; dy++){
@@ -471,10 +487,8 @@ std::vector<bool> Patchmatch::createEdgeMask(const Image& target){
                     int nx = std::clamp(x+dx, 0, target.width-1);
                     int ny = std::clamp(y+dy, 0, target.height-1);
                     RGB n = ImageUtils::rgbAt(target, nx, ny);
-                    bool neighborIsWhite = (n.r >= WHITE_THRESHOLD)
-                                           && (n.g >= WHITE_THRESHOLD)
-                                           && (n.b >= WHITE_THRESHOLD);
-                    hasOppositeNeighbor = neighborIsWhite != isWhite;
+                    bool neighborIsBackground = isBackgroundPixel(n);
+                    hasOppositeNeighbor = neighborIsBackground != isBackground;
                 }
             }
             edgeMask[y * target.width + x] = hasOppositeNeighbor;
